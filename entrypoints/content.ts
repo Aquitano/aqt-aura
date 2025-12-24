@@ -20,7 +20,13 @@ export default defineContentScript({
         });
 
         // Listen for navigation
-        globalThis.addEventListener("popstate", () => manager.applyAllElements());
-        globalThis.addEventListener("yt-navigate-finish", () => manager.applyAllElements());
+        globalThis.addEventListener("popstate", () => {
+            manager.updatePageType();
+            manager.applyAllElements();
+        });
+        globalThis.addEventListener("yt-navigate-finish", () => {
+            manager.updatePageType();
+            manager.applyAllElements();
+        });
     },
 });

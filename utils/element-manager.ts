@@ -12,12 +12,17 @@ import { SPECIAL_HANDLERS } from "./youtube-handlers";
 export class ElementManager {
     private elements: YoutubeElement[] = [];
     private observer: MutationObserver | null = null;
+    private cachedPageType: PageType | null = null;
+    private elementsByPageType: Map<PageType | 'global', YoutubeElement[]> = new Map();
+    private appliedStyles: WeakMap<HTMLElement, string> = new WeakMap();
 
     async initialize() {
         const storedObj = await browser.storage.local.get(STORAGE_KEY);
         const storedValue = storedObj?.[STORAGE_KEY];
 
         this.elements = mergeWithDefaults(DEFAULT_ELEMENTS, storedValue);
+        this.buildPageTypeLookup();
+        this.updatePageType();
 
         this.applyAllElements();
         this.setupObserver();
@@ -26,40 +31,63 @@ export class ElementManager {
     updateElements(newElements: unknown) {
         console.log("Updating elements", newElements);
         this.elements = mergeWithDefaults(DEFAULT_ELEMENTS, newElements);
-        this.applyAllElements();
+        this.buildPageTypeLookup();
+        this.applyAllElements(true); // Force clean inactive
+    }
+
+    updatePageType() {
+        this.cachedPageType = getCurrentPageType();
+    }
+
+    private buildPageTypeLookup() {
+        this.elementsByPageType.clear();
+
+        for (const el of this.elements) {
+            if (!el.pageTypes || el.pageTypes.length === 0) {
+                // Global elements
+                const global = this.elementsByPageType.get('global') || [];
+                global.push(el);
+                this.elementsByPageType.set('global', global);
+            } else {
+                // Page-specific elements
+                for (const pageType of el.pageTypes) {
+                    const list = this.elementsByPageType.get(pageType) || [];
+                    list.push(el);
+                    this.elementsByPageType.set(pageType, list);
+                }
+            }
+        }
     }
 
     setupObserver() {
         this.observer?.disconnect();
-        this.observer = new MutationObserver(debouncer(() => this.applyAllElements(), 50));
+        this.observer = new MutationObserver(debouncer(() => this.applyAllElements(false), 50));
         this.observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    applyAllElements() {
-        const pageType = getCurrentPageType();
-        for (const el of this.elements) {
-            this.processElement(el, pageType);
+    applyAllElements(cleanInactive = false) {
+        // Get relevant elements for current page
+        const globalElements = this.elementsByPageType.get('global') || [];
+        const pageElements = this.cachedPageType
+            ? (this.elementsByPageType.get(this.cachedPageType) || [])
+            : [];
+
+        const relevantElements = [...globalElements, ...pageElements];
+
+        for (const el of relevantElements) {
+            const shouldBeActive = el.checked;
+
+            // If the element is not active, and we are not forcing a clean-up,
+            // we skip the expensive DOM query.
+            if (!shouldBeActive && !cleanInactive) {
+                continue;
+            }
+
+            this.processElement(el, shouldBeActive);
         }
     }
 
-    private isApplicableOnPage(el: YoutubeElement, pageType: PageType | null) {
-        // If no pageTypes, treat as globally applicable
-        if (!el.pageTypes || el.pageTypes.length === 0) return true;
-
-        // If we can't detect page type, be conservative: apply globally
-        if (!pageType) return true;
-
-        return el.pageTypes.includes(pageType);
-    }
-
-    private processElement(el: YoutubeElement, pageType: PageType | null) {
-        const applicable = this.isApplicableOnPage(el, pageType);
-
-        // Determine if the element should be "active" (checked by user AND applicable on this page)
-        // If it's not applicable, we treat it as inactive (revert changes)
-        // If it is applicable, we respect the user's checked state
-        const shouldBeActive = applicable && el.checked;
-
+    private processElement(el: YoutubeElement, shouldBeActive: boolean) {
         // 1. Run Special Logic (Strategy Pattern)
         const handler = SPECIAL_HANDLERS[el.id];
 
@@ -80,10 +108,19 @@ export class ElementManager {
         const value = el.style || "none";
 
         nodes.forEach((node) => {
+            const styleKey = `${property}:${value}`;
+            const currentStyle = this.appliedStyles.get(node);
+
             if (shouldBeActive) {
-                node.style.setProperty(property, value, "important");
-            } else {
+                // Only apply if not already applied
+                if (currentStyle !== styleKey) {
+                    node.style.setProperty(property, value, "important");
+                    this.appliedStyles.set(node, styleKey);
+                }
+            } else if (currentStyle) {
+                // Only remove if currently applied
                 node.style.removeProperty(property);
+                this.appliedStyles.delete(node);
             }
         });
     }
