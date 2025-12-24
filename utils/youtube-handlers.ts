@@ -9,9 +9,6 @@ type HandlerContext = {
 
 type CustomHandler = (ctx: HandlerContext) => void;
 
-// Repository for stateful handlers
-const state: Record<string, any> = {};
-
 const handleSidebar: CustomHandler = ({ active }) => {
     const videoContainer = document.querySelector(
         "ytd-app[guide-persistent-and-visible] ytd-page-manager.ytd-app"

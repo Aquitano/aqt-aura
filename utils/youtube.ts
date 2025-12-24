@@ -30,8 +30,6 @@ export interface YoutubeElement {
     category?: string; // To group them in the UI
 }
 
-export const AQT_VERSION = "2.0.0";
-
 export const DEFAULT_ELEMENTS: YoutubeElement[] = [
     // --- Header ---
     {
