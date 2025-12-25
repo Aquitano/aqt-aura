@@ -1,5 +1,4 @@
-
-import { PAGE_TYPES, PageType } from "./youtube";
+import { PAGE_TYPES, PageType } from './youtube';
 
 /**
  * Debounces a function call.
@@ -19,13 +18,7 @@ export function debouncer<T extends (...args: any[]) => void>(func: T, wait: num
 export function selectByXPath(selector: string, context: Node = document): HTMLElement[] {
     const results: HTMLElement[] = [];
     try {
-        const snapshot = document.evaluate(
-            selector,
-            context,
-            null,
-            XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE,
-            null
-        );
+        const snapshot = document.evaluate(selector, context, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
         for (let i = 0; i < snapshot.snapshotLength; i++) {
             const node = snapshot.snapshotItem(i);
             if (node && node instanceof HTMLElement) {
@@ -44,22 +37,19 @@ export function selectByXPath(selector: string, context: Node = document): HTMLE
  */
 export function getCurrentPageType(): PageType | null {
     const url = globalThis.location.href;
-    if (
-        url === "https://www.youtube.com/" ||
-        url.startsWith("https://www.youtube.com/?")
-    ) {
+    if (url === 'https://www.youtube.com/' || url.startsWith('https://www.youtube.com/?')) {
         return PAGE_TYPES.HOME;
-    } else if (url.includes("/watch")) {
+    } else if (url.includes('/watch')) {
         return PAGE_TYPES.VIDEO;
-    } else if (url.includes("/feed/subscriptions")) {
+    } else if (url.includes('/feed/subscriptions')) {
         return PAGE_TYPES.SUBSCRIPTIONS;
-    } else if (url.includes("/results?search_query")) {
+    } else if (url.includes('/results?search_query')) {
         return PAGE_TYPES.SEARCH;
-    } else if (url.includes("/feed/trending")) {
+    } else if (url.includes('/feed/trending')) {
         return PAGE_TYPES.TRENDING;
-    } else if (url.includes("/feed/downloads")) {
+    } else if (url.includes('/feed/downloads')) {
         return PAGE_TYPES.DOWNLOADS;
-    } else if (url.includes("/@")) {
+    } else if (url.includes('/@')) {
         return PAGE_TYPES.CHANNEL;
     }
     return null;

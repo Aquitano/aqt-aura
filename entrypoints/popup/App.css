@@ -1,21 +1,27 @@
 :root {
-  --bg-color: #050505;
-  --surface-1: #161616;
-  --surface-2: #222222;
-  --border-subtle: #333;
-  --text-primary: #fff;
-  --text-secondary: #aaa;
-  --accent: #5865F2;
-  --onion-purple: #7525AD;
+    --bg-color: #050505;
+    --surface-1: #161616;
+    --surface-2: #222222;
+    --border-subtle: #333;
+    --text-primary: #fff;
+    --text-secondary: #aaa;
+    --accent: #5865f2;
+    --onion-purple: #7525ad;
 
-  --radius-lg: 16px;
-  --radius-md: 12px;
-  --radius-sm: 8px;
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
 }
 
 body {
     margin: 0;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family:
+        'Inter',
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        Roboto,
+        sans-serif;
     background-color: var(--bg-color);
     color: var(--text-primary);
     width: 300px;
@@ -77,9 +83,17 @@ main {
 }
 
 /* Scrollbar */
-main::-webkit-scrollbar { width: 8px; }
-main::-webkit-scrollbar-track { background: transparent; }
-main::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 2px solid var(--bg-color); }
+main::-webkit-scrollbar {
+    width: 8px;
+}
+main::-webkit-scrollbar-track {
+    background: transparent;
+}
+main::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+    border: 2px solid var(--bg-color);
+}
 
 .screen-content {
     padding: 24px;
@@ -87,8 +101,14 @@ main::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 2p
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* --- Navigation Cards (Home) --- */
@@ -112,7 +132,7 @@ main::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 2p
     background: var(--surface-2);
     border-color: #555;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .nav-card.disabled {
@@ -249,13 +269,19 @@ main::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 2p
     flex-direction: column;
     /* gap: 12px; Remove gap in favor of borders or just list look */
     border-top: 1px solid var(--border-subtle);
-    background: rgba(0,0,0,0.2); /* slightly darker inside */
+    background: rgba(0, 0, 0, 0.2); /* slightly darker inside */
     animation: slideDown 0.2s ease-out;
 }
 
 @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .toggle-item {
@@ -265,7 +291,7 @@ main::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 2p
     padding: 14px 20px;
     cursor: pointer;
     transition: all 0.2s ease;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .toggle-item:last-child {
@@ -273,7 +299,7 @@ main::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 2p
 }
 
 .toggle-item:hover {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .toggle-label {
@@ -291,27 +317,34 @@ main::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 2p
     flex-shrink: 0;
     margin-left: 16px;
 }
-.switch input { opacity: 0; width: 0; height: 0; }
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
 
 .slider {
     position: absolute;
     cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background-color: #3a3a3a;
-    transition: .25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 34px;
 }
 .slider:before {
     position: absolute;
-    content: "";
+    content: '';
     height: 20px;
     width: 20px;
     left: 2px;
     bottom: 2px;
     background-color: white;
-    transition: .25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 input:checked + .slider {

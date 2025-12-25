@@ -1,11 +1,10 @@
-
-import { ElementManager } from "@/utils/element-manager";
-import { STORAGE_KEY } from "@/utils/youtube";
+import { ElementManager } from '@/utils/element-manager';
+import { STORAGE_KEY } from '@/utils/youtube';
 
 export default defineContentScript({
-    matches: ["*://www.youtube.com/*", "*://m.youtube.com/*"],
+    matches: ['*://www.youtube.com/*', '*://m.youtube.com/*'],
     async main() {
-        console.log("AQT Browser (YouTube Elements) loaded");
+        console.log('AQT Browser (YouTube Elements) loaded');
         const manager = new ElementManager();
         await manager.initialize();
 
@@ -14,17 +13,17 @@ export default defineContentScript({
         // Listen for storage changes
         browser.storage.local.onChanged.addListener((changes) => {
             if (!changes[STORAGE_KEY]) return;
-            console.log("New YouTube elements settings received");
+            console.log('New YouTube elements settings received');
 
             manager.updateElements(changes[STORAGE_KEY].newValue);
         });
 
         // Listen for navigation
-        globalThis.addEventListener("popstate", () => {
+        globalThis.addEventListener('popstate', () => {
             manager.updatePageType();
             manager.applyAllElements();
         });
-        globalThis.addEventListener("yt-navigate-finish", () => {
+        globalThis.addEventListener('yt-navigate-finish', () => {
             manager.updatePageType();
             manager.applyAllElements();
         });

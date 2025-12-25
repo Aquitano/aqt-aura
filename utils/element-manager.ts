@@ -1,13 +1,7 @@
-
-import { debouncer, getCurrentPageType, selectByXPath } from "./dom";
-import { mergeWithDefaults } from "./storage";
-import {
-    DEFAULT_ELEMENTS,
-    PageType,
-    STORAGE_KEY,
-    YoutubeElement,
-} from "./youtube";
-import { SPECIAL_HANDLERS } from "./youtube-handlers";
+import { debouncer, getCurrentPageType, selectByXPath } from './dom';
+import { mergeWithDefaults } from './storage';
+import { DEFAULT_ELEMENTS, PageType, STORAGE_KEY, YoutubeElement } from './youtube';
+import { SPECIAL_HANDLERS } from './youtube-handlers';
 
 export class ElementManager {
     private elements: YoutubeElement[] = [];
@@ -29,7 +23,7 @@ export class ElementManager {
     }
 
     updateElements(newElements: unknown) {
-        console.log("Updating elements", newElements);
+        console.log('Updating elements', newElements);
         this.elements = mergeWithDefaults(DEFAULT_ELEMENTS, newElements);
         this.buildPageTypeLookup();
         this.applyAllElements(true); // Force clean inactive
@@ -68,9 +62,7 @@ export class ElementManager {
     applyAllElements(cleanInactive = false) {
         // Get relevant elements for current page
         const globalElements = this.elementsByPageType.get('global') || [];
-        const pageElements = this.cachedPageType
-            ? (this.elementsByPageType.get(this.cachedPageType) || [])
-            : [];
+        const pageElements = this.cachedPageType ? this.elementsByPageType.get(this.cachedPageType) || [] : [];
 
         const relevantElements = [...globalElements, ...pageElements];
 
@@ -104,8 +96,8 @@ export class ElementManager {
         // For standard processing:
         // If Active: apply style
         // If Inactive: remove style
-        const property = el.property || "display";
-        const value = el.style || "none";
+        const property = el.property || 'display';
+        const value = el.style || 'none';
 
         nodes.forEach((node) => {
             const styleKey = `${property}:${value}`;
@@ -114,7 +106,7 @@ export class ElementManager {
             if (shouldBeActive) {
                 // Only apply if not already applied
                 if (currentStyle !== styleKey) {
-                    node.style.setProperty(property, value, "important");
+                    node.style.setProperty(property, value, 'important');
                     this.appliedStyles.set(node, styleKey);
                 }
             } else if (currentStyle) {

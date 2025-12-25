@@ -6,7 +6,7 @@ export default defineConfig({
         permissions: ['storage'],
         host_permissions: ['*://www.youtube.com/*', '*://m.youtube.com/*'],
         name: 'AQT Aura',
-        description: "AQT Aura - Reclaim your digital space.",
+        description: 'AQT Aura - Reclaim your digital space.',
         version: '1.0.0',
     },
 });

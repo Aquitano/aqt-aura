@@ -1,11 +1,10 @@
-
-import { mergeWithDefaults } from "@/utils/storage";
-import { DEFAULT_ELEMENTS, STORAGE_KEY, YoutubeElement } from "@/utils/youtube";
-import { useEffect, useRef, useState } from "react";
-import "./App.css";
+import { mergeWithDefaults } from '@/utils/storage';
+import { DEFAULT_ELEMENTS, STORAGE_KEY, YoutubeElement } from '@/utils/youtube';
+import { useEffect, useRef, useState } from 'react';
+import './App.css';
 
 // --- Types ---
-type Screen = "home" | "youtube";
+type Screen = 'home' | 'youtube';
 
 interface CollapsibleSectionProps {
     title: string;
@@ -16,19 +15,9 @@ interface CollapsibleSectionProps {
 }
 
 // --- Components ---
-const CollapsibleSection = ({
-    title,
-    items,
-    isOpen,
-    onToggleOpen,
-    onToggleItem,
-}: CollapsibleSectionProps) => (
+const CollapsibleSection = ({ title, items, isOpen, onToggleOpen, onToggleItem }: CollapsibleSectionProps) => (
     <div className="category-section">
-        <button
-            type="button"
-            className={`category-header ${isOpen ? "open" : ""}`}
-            onClick={onToggleOpen}
-        >
+        <button type="button" className={`category-header ${isOpen ? 'open' : ''}`} onClick={onToggleOpen}>
             <h3>{title}</h3>
             <span className="chevron" aria-hidden="true">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -81,14 +70,7 @@ const HomeScreen = ({ onNavigate }: { onNavigate: () => void }) => (
 
         <button className="nav-card disabled" type="button" disabled>
             <div className="nav-card-icon generic-icon">
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    width="24"
-                    height="24"
-                >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="16" />
                     <line x1="8" y1="12" x2="16" y2="12" />
@@ -115,14 +97,16 @@ const YouTubeScreen = ({
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
     // Grouping logic inside the component (simple enough)
-    const categoryOrder = ["Home", "Shorts", "Video Player", "Header", "Sidebar", "General", "Other"];
-    const grouped = categoryOrder.map(cat => ({
-        title: cat,
-        items: elements.filter(e => (e.category || "Other") === cat)
-    })).filter(g => g.items.length > 0);
+    const categoryOrder = ['Home', 'Shorts', 'Video Player', 'Header', 'Sidebar', 'General', 'Other'];
+    const grouped = categoryOrder
+        .map((cat) => ({
+            title: cat,
+            items: elements.filter((e) => (e.category || 'Other') === cat),
+        }))
+        .filter((g) => g.items.length > 0);
 
     const toggleSection = (title: string) => {
-        setOpenSections(prev => ({ ...prev, [title]: !prev[title] }));
+        setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }));
     };
 
     return (
@@ -152,7 +136,7 @@ const YouTubeScreen = ({
 
 // --- Main App ---
 export default function App() {
-    const [screen, setScreen] = useState<Screen>("home");
+    const [screen, setScreen] = useState<Screen>('home');
     const [elements, setElements] = useState<YoutubeElement[]>(DEFAULT_ELEMENTS);
     const [loading, setLoading] = useState(true);
     const hasLoadedRef = useRef(false);
@@ -165,7 +149,7 @@ export default function App() {
                 const merged = mergeWithDefaults(DEFAULT_ELEMENTS, storedObj?.[STORAGE_KEY]);
                 setElements(merged);
             } catch (e) {
-                console.error("Failed to load settings", e);
+                console.error('Failed to load settings', e);
             } finally {
                 setLoading(false);
                 hasLoadedRef.current = true;
@@ -181,7 +165,7 @@ export default function App() {
     }, [elements]);
 
     const handleToggle = (id: string, checked: boolean) => {
-        setElements(prev => prev.map(el => el.id === id ? { ...el, checked } : el));
+        setElements((prev) => prev.map((el) => (el.id === id ? { ...el, checked } : el)));
     };
 
     if (loading) return <div className="loading">Loading...</div>;
@@ -196,14 +180,10 @@ export default function App() {
             </header>
 
             <main>
-                {screen === "home" ? (
-                    <HomeScreen onNavigate={() => setScreen("youtube")} />
+                {screen === 'home' ? (
+                    <HomeScreen onNavigate={() => setScreen('youtube')} />
                 ) : (
-                    <YouTubeScreen
-                        onBack={() => setScreen("home")}
-                        elements={elements}
-                        onToggleItem={handleToggle}
-                    />
+                    <YouTubeScreen onBack={() => setScreen('home')} elements={elements} onToggleItem={handleToggle} />
                 )}
             </main>
         </div>
