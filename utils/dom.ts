@@ -3,7 +3,7 @@ import { PAGE_TYPES, PageType } from './youtube';
 /**
  * Debounces a function call.
  */
-export function debouncer<T extends (...args: any[]) => void>(func: T, wait: number) {
+export function debouncer<T extends (...args: unknown[]) => void>(func: T, wait: number) {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     return (...args: Parameters<T>) => {
         if (timeout) clearTimeout(timeout);

@@ -18,7 +18,7 @@ const handleSidebar: CustomHandler = ({ active }) => {
     }
 };
 
-const handleVideoThumbnail: CustomHandler = ({ element, active }) => {
+const handleVideoThumbnail: CustomHandler = ({ _, active }) => {
     const customThumbId = 'video-thumbnail-aqt';
     const existingThumb = document.getElementById(customThumbId);
 

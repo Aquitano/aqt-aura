@@ -12,18 +12,26 @@
         "zip:firefox": "wxt zip -b firefox",
         "compile": "tsc --noEmit",
         "postinstall": "wxt prepare",
-        "format": "prettier --write ."
+        "format": "prettier --write .",
+        "lint": "eslint ."
     },
     "dependencies": {
         "react": "^19.2.3",
         "react-dom": "^19.2.3"
     },
     "devDependencies": {
+        "@eslint/css": "^0.14.1",
+        "@eslint/js": "^9.39.2",
+        "@eslint/json": "^0.14.0",
         "@types/react": "^19.2.7",
         "@types/react-dom": "^19.2.3",
         "@wxt-dev/module-react": "^1.1.5",
+        "eslint": "^9.39.2",
+        "eslint-plugin-react": "^7.37.5",
+        "globals": "^16.5.0",
         "prettier": "3.7.4",
         "typescript": "^5.9.3",
+        "typescript-eslint": "^8.50.1",
         "wxt": "^0.20.6"
     }
 }
