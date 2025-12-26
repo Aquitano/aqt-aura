@@ -1,3 +1,4 @@
+import { PLAYBACK_SPEED_KEY } from '@/utils/playback';
 import { mergeWithDefaults } from '@/utils/storage';
 import { DEFAULT_ELEMENTS, STORAGE_KEY, YoutubeElement } from '@/utils/youtube';
 import { useEffect, useRef, useState } from 'react';
@@ -88,10 +89,14 @@ const YouTubeScreen = ({
     onBack,
     elements,
     onToggleItem,
+    playbackSpeed,
+    onSpeedChange,
 }: {
     onBack: () => void;
     elements: YoutubeElement[];
     onToggleItem: (id: string, checked: boolean) => void;
+    playbackSpeed: number;
+    onSpeedChange: (speed: number) => void;
 }) => {
     // Local state for section expansion
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
@@ -118,6 +123,27 @@ const YouTubeScreen = ({
                 <h2>YouTube Settings</h2>
             </div>
 
+            <div className="speed-control-section">
+                <h3>Default Playback Speed</h3>
+                <div className="speed-control-row">
+                    <input
+                        type="range"
+                        min="0.25"
+                        max="5"
+                        step="0.25"
+                        value={playbackSpeed}
+                        onChange={(e) => onSpeedChange(Number.parseFloat(e.target.value))}
+                        className="speed-slider"
+                    />
+                    <div className="speed-value">
+                        <span>{playbackSpeed}x</span>
+                        <button className="reset-speed-btn" onClick={() => onSpeedChange(1)} title="Reset to 1x">
+                            ↺
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div className="settings-list">
                 {grouped.map((group) => (
                     <CollapsibleSection
@@ -138,6 +164,7 @@ const YouTubeScreen = ({
 export default function App() {
     const [screen, setScreen] = useState<Screen>('home');
     const [elements, setElements] = useState<YoutubeElement[]>(DEFAULT_ELEMENTS);
+    const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
     const [loading, setLoading] = useState(true);
     const hasLoadedRef = useRef(false);
 
@@ -148,6 +175,9 @@ export default function App() {
                 const storedObj = await browser.storage.local.get(STORAGE_KEY);
                 const merged = mergeWithDefaults(DEFAULT_ELEMENTS, storedObj?.[STORAGE_KEY]);
                 setElements(merged);
+
+                const storedSpeed = await browser.storage.local.get(PLAYBACK_SPEED_KEY);
+                setPlaybackSpeed((storedSpeed?.[PLAYBACK_SPEED_KEY] as number) || 1);
             } catch (e) {
                 console.error('Failed to load settings', e);
             } finally {
@@ -163,6 +193,12 @@ export default function App() {
         if (!hasLoadedRef.current) return;
         browser.storage.local.set({ [STORAGE_KEY]: elements }).catch(console.error);
     }, [elements]);
+
+    // Save Speed on Change
+    useEffect(() => {
+        if (!hasLoadedRef.current) return;
+        browser.storage.local.set({ [PLAYBACK_SPEED_KEY]: playbackSpeed }).catch(console.error);
+    }, [playbackSpeed]);
 
     const handleToggle = (id: string, checked: boolean) => {
         setElements((prev) => prev.map((el) => (el.id === id ? { ...el, checked } : el)));
@@ -183,7 +219,13 @@ export default function App() {
                 {screen === 'home' ? (
                     <HomeScreen onNavigate={() => setScreen('youtube')} />
                 ) : (
-                    <YouTubeScreen onBack={() => setScreen('home')} elements={elements} onToggleItem={handleToggle} />
+                    <YouTubeScreen
+                        onBack={() => setScreen('home')}
+                        elements={elements}
+                        onToggleItem={handleToggle}
+                        playbackSpeed={playbackSpeed}
+                        onSpeedChange={setPlaybackSpeed}
+                    />
                 )}
             </main>
         </div>

@@ -1,4 +1,6 @@
 import { ElementManager } from '@/utils/element-manager';
+import { OverlayManager } from '@/utils/overlay';
+import { PLAYBACK_SPEED_KEY, PlaybackManager } from '@/utils/playback';
 import { STORAGE_KEY } from '@/utils/youtube';
 
 export default defineContentScript({
@@ -7,6 +9,12 @@ export default defineContentScript({
         console.log('AQT Browser (YouTube Elements) loaded');
         const manager = new ElementManager();
         await manager.initialize();
+
+        const playbackManager = new PlaybackManager();
+        await playbackManager.initialize();
+
+        const overlayManager = new OverlayManager(playbackManager);
+        overlayManager.initialize();
 
         manager.applyAllElements();
 
@@ -18,6 +26,15 @@ export default defineContentScript({
             manager.updateElements(changes[STORAGE_KEY].newValue);
         });
 
+        browser.storage.local.onChanged.addListener((changes) => {
+            if (changes[PLAYBACK_SPEED_KEY]) {
+                const newSpeed = changes[PLAYBACK_SPEED_KEY].newValue;
+                if (typeof newSpeed === 'number') {
+                    playbackManager.setSpeed(newSpeed);
+                }
+            }
+        });
+
         // Listen for navigation
         globalThis.addEventListener('popstate', () => {
             manager.updatePageType();
@@ -26,6 +43,7 @@ export default defineContentScript({
         globalThis.addEventListener('yt-navigate-finish', () => {
             manager.updatePageType();
             manager.applyAllElements();
+            playbackManager.reapply();
         });
     },
 });
