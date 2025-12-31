@@ -1,101 +1,173 @@
 export const PLAYBACK_SPEED_KEY = 'youtube_playback_speed';
 
+/** Speed enforcement interval in milliseconds */
+const ENFORCEMENT_INTERVAL_MS = 1000;
+
+/** Tolerance for speed comparison to avoid floating point issues */
+const SPEED_TOLERANCE = 0.05;
+
+/** Speed bounds */
+const MIN_SPEED = 0.25;
+const MAX_SPEED = 16;
+const DEFAULT_SPEED = 1;
+
+/** Data attribute to mark videos with attached listeners */
+const ATTACHED_MARKER = 'data-aqt-speed-attached';
+
+/**
+ * Manages video playback speed with persistence and enforcement.
+ * Handles YouTube's attempts to reset playback speed.
+ */
 export class PlaybackManager {
-    private currentSpeed: number = 1;
-    private intervalId: number | undefined;
+    private currentSpeed = DEFAULT_SPEED;
+    private intervalId: ReturnType<typeof setInterval> | undefined;
+    private observer: MutationObserver | null = null;
+    private isInitialized = false;
 
     constructor() {
-        this.observeVideo();
+        this.setupVideoObserver();
     }
 
-    public async initialize() {
-        // Load initial speed
-        const storage = await browser.storage.local.get(PLAYBACK_SPEED_KEY);
-        this.currentSpeed = (storage[PLAYBACK_SPEED_KEY] as number) || 1;
-        console.log('[AQT] PlaybackManager initialized with speed:', this.currentSpeed);
-        this.applySpeed();
+    async initialize(): Promise<void> {
+        if (this.isInitialized) {
+            return;
+        }
 
-        // Start a fallback interval to enforce speed periodically
-        // This helps when YouTube resets the player state internally without DOM changes
-        this.startEnforcement();
-    }
+        try {
+            const storage = await browser.storage.local.get(PLAYBACK_SPEED_KEY);
+            const storedSpeed: unknown = storage[PLAYBACK_SPEED_KEY];
 
-    public setSpeed(speed: number) {
-        console.log('[AQT] Setting speed to:', speed);
-        this.currentSpeed = speed;
-        this.applySpeed();
-    }
-
-    private getVideoElement(): HTMLVideoElement | null {
-        return document.querySelector('video.html5-main-video') || document.querySelector('video');
-    }
-
-    private applySpeed() {
-        const video = this.getVideoElement();
-        if (video) {
-            // Only apply if different to avoid spamming / fighting loops
-            if (Math.abs(video.playbackRate - this.currentSpeed) > 0.05) {
-                console.log(`[AQT] Applying speed ${this.currentSpeed}x to`, video);
-                video.playbackRate = this.currentSpeed;
-            }
-        } else {
-            console.log('[AQT] No video element found to apply speed');
+            this.currentSpeed = this.validateSpeed(storedSpeed);
+            this.applySpeed();
+            this.startEnforcement();
+            this.isInitialized = true;
+        } catch (error) {
+            console.error('[AQT] Failed to initialize PlaybackManager:', error);
         }
     }
 
-    private startEnforcement() {
-        if (this.intervalId) globalThis.clearInterval(this.intervalId);
-
-        this.intervalId = globalThis.setInterval(() => {
-            this.applySpeed();
-        }, 1000) as unknown as number; // Check every second
-    }
-
-    private observeVideo() {
-        const observer = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.addedNodes.length) {
-                    const video = this.getVideoElement();
-                    if (video) {
-                        this.attachVideoListeners(video);
-
-                        this.applySpeed();
-                    }
-                }
-            }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        // Try initial attach
-        const video = this.getVideoElement();
-        if (video) this.attachVideoListeners(video);
-    }
-
-    private attachVideoListeners(video: HTMLVideoElement) {
-        if (!video) return;
-
-        // Ensure we don't attach duplicate listeners if we call this multiple times
-        if (video.dataset.aqtSpeedAttached) return;
-        video.dataset.aqtSpeedAttached = 'true';
-        console.log('[AQT] Attached listeners to video element');
-
-        video.addEventListener('ratechange', () => {
-            if (Math.abs(video.playbackRate - this.currentSpeed) > 0.1) {
-                console.log(`[AQT] Detected rate change to ${video.playbackRate}, re-enforcing ${this.currentSpeed}`);
-                this.applySpeed();
-            }
-        });
-
+    setSpeed(speed: number): void {
+        const validatedSpeed = this.validateSpeed(speed);
+        this.currentSpeed = validatedSpeed;
         this.applySpeed();
     }
 
-    public reapply() {
-        console.log('[AQT] Re-applying speed logic manually');
+    getSpeed(): number {
+        return this.currentSpeed;
+    }
+
+    /**
+     * Re-applies speed settings, useful after navigation.
+     */
+    reapply(): void {
         const video = this.getVideoElement();
         if (video) {
             this.attachVideoListeners(video);
             this.applySpeed();
         }
+    }
+
+    destroy(): void {
+        if (this.intervalId !== undefined) {
+            clearInterval(this.intervalId);
+            this.intervalId = undefined;
+        }
+        this.observer?.disconnect();
+        this.observer = null;
+        this.isInitialized = false;
+    }
+
+    private validateSpeed(value: unknown): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return DEFAULT_SPEED;
+        }
+        return Math.max(MIN_SPEED, Math.min(MAX_SPEED, Math.round(value * 100) / 100));
+    }
+
+    /**
+     * Gets the main video element on the page.
+     */
+    private getVideoElement(): HTMLVideoElement | null {
+        return (
+            document.querySelector<HTMLVideoElement>('video.html5-main-video') ??
+            document.querySelector<HTMLVideoElement>('video')
+        );
+    }
+
+    private applySpeed(): void {
+        const video = this.getVideoElement();
+        if (!video) {
+            return;
+        }
+
+        // Only apply if speed differs significantly to avoid feedback loops
+        if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
+            try {
+                video.playbackRate = this.currentSpeed;
+            } catch {
+                // Some videos may not support speed changes
+            }
+        }
+    }
+
+    /**
+     * Starts periodic speed enforcement to counter YouTube resets.
+     */
+    private startEnforcement(): void {
+        if (this.intervalId !== undefined) {
+            clearInterval(this.intervalId);
+        }
+
+        this.intervalId = setInterval(() => {
+            this.applySpeed();
+        }, ENFORCEMENT_INTERVAL_MS);
+    }
+
+    private setupVideoObserver(): void {
+        this.observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.addedNodes.length === 0) {
+                    continue;
+                }
+
+                const video = this.getVideoElement();
+                if (video) {
+                    this.attachVideoListeners(video);
+                    this.applySpeed();
+                    break;
+                }
+            }
+        });
+
+        // Start observing once body is available
+        if (document.body) {
+            this.observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+            });
+        }
+
+        // Try initial attach for already-loaded videos
+        const video = this.getVideoElement();
+        if (video) {
+            this.attachVideoListeners(video);
+        }
+    }
+
+    private attachVideoListeners(video: HTMLVideoElement): void {
+        // Prevent duplicate listener attachment
+        if (video.hasAttribute(ATTACHED_MARKER)) {
+            return;
+        }
+        video.setAttribute(ATTACHED_MARKER, 'true');
+
+        video.addEventListener('ratechange', () => {
+            // Re-enforce speed if YouTube tried to change it
+            if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
+                this.applySpeed();
+            }
+        });
+
+        this.applySpeed();
     }
 }

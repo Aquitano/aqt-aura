@@ -1,119 +1,211 @@
-import { debouncer, getCurrentPageType, selectByXPath } from './dom';
+import { debounce, getCurrentPageType, selectByXPath } from './dom';
 import { mergeWithDefaults } from './storage';
 import { DEFAULT_ELEMENTS, PageType, STORAGE_KEY, YoutubeElement } from './youtube';
 import { SPECIAL_HANDLERS } from './youtube-handlers';
 
+/** Default debounce delay for mutation observer callbacks */
+const OBSERVER_DEBOUNCE_MS = 50;
+
+/** Default CSS property and value for hiding elements */
+const DEFAULT_PROPERTY = 'display';
+const DEFAULT_STYLE = 'none';
+
+/**
+ * Manages YouTube page elements visibility and custom behaviors.
+ * Handles element selection, style application, and special element handlers.
+ */
 export class ElementManager {
     private elements: YoutubeElement[] = [];
     private observer: MutationObserver | null = null;
     private cachedPageType: PageType | null = null;
-    private elementsByPageType: Map<PageType | 'global', YoutubeElement[]> = new Map();
-    private appliedStyles: WeakMap<HTMLElement, string> = new WeakMap();
+    private isInitialized = false;
 
-    async initialize() {
-        const storedObj = await browser.storage.local.get(STORAGE_KEY);
-        const storedValue = storedObj?.[STORAGE_KEY];
+    private readonly elementsByPageType = new Map<PageType | 'global', YoutubeElement[]>();
 
-        this.elements = mergeWithDefaults(DEFAULT_ELEMENTS, storedValue);
-        this.buildPageTypeLookup();
-        this.updatePageType();
+    private readonly appliedStyles = new WeakMap<HTMLElement, string>();
 
-        this.applyAllElements();
-        this.setupObserver();
-    }
+    /**
+     * Initializes the element manager by loading stored preferences
+     * and setting up the mutation observer.
+     */
+    async initialize(): Promise<void> {
+        if (this.isInitialized) {
+            return;
+        }
 
-    updateElements(newElements: unknown) {
-        console.log('Updating elements', newElements);
-        this.elements = mergeWithDefaults(DEFAULT_ELEMENTS, newElements);
-        this.buildPageTypeLookup();
-        this.applyAllElements(true); // Force clean inactive
-    }
+        try {
+            const storedObj = await browser.storage.local.get(STORAGE_KEY);
+            const storedValue: unknown = storedObj?.[STORAGE_KEY];
 
-    updatePageType() {
-        this.cachedPageType = getCurrentPageType();
-    }
+            this.elements = mergeWithDefaults(DEFAULT_ELEMENTS, storedValue);
+            this.buildPageTypeLookup();
+            this.updatePageType();
 
-    private buildPageTypeLookup() {
-        this.elementsByPageType.clear();
-
-        for (const el of this.elements) {
-            if (!el.pageTypes || el.pageTypes.length === 0) {
-                // Global elements
-                const global = this.elementsByPageType.get('global') || [];
-                global.push(el);
-                this.elementsByPageType.set('global', global);
-            } else {
-                // Page-specific elements
-                for (const pageType of el.pageTypes) {
-                    const list = this.elementsByPageType.get(pageType) || [];
-                    list.push(el);
-                    this.elementsByPageType.set(pageType, list);
-                }
-            }
+            this.applyAllElements();
+            this.setupObserver();
+            this.isInitialized = true;
+        } catch (error) {
+            console.error('[AQT] Failed to initialize ElementManager:', error);
         }
     }
 
-    setupObserver() {
-        this.observer?.disconnect();
-        this.observer = new MutationObserver(debouncer(() => this.applyAllElements(false), 50));
-        this.observer.observe(document.body, { childList: true, subtree: true });
+    /**
+     * Updates elements with new configuration from storage.
+     * Forces a cleanup of inactive elements.
+     */
+    updateElements(newElements: unknown): void {
+        this.elements = mergeWithDefaults(DEFAULT_ELEMENTS, newElements);
+        this.buildPageTypeLookup();
+        this.applyAllElements(true);
     }
 
-    applyAllElements(cleanInactive = false) {
-        // Get relevant elements for current page
-        const globalElements = this.elementsByPageType.get('global') || [];
-        const pageElements = this.cachedPageType ? this.elementsByPageType.get(this.cachedPageType) || [] : [];
+    /**
+     * Updates the cached page type based on current URL.
+     */
+    updatePageType(): void {
+        this.cachedPageType = getCurrentPageType();
+    }
 
-        const relevantElements = [...globalElements, ...pageElements];
+    /**
+     * Applies all relevant elements for the current page.
+     * @param cleanInactive - When true, also removes styles from inactive elements
+     */
+    applyAllElements(cleanInactive = false): void {
+        const relevantElements = this.getRelevantElements();
 
-        for (const el of relevantElements) {
-            const shouldBeActive = el.checked;
+        for (const element of relevantElements) {
+            const shouldBeActive = element.checked;
 
-            // If the element is not active, and we are not forcing a clean-up,
-            // we skip the expensive DOM query.
+            // Skip inactive elements unless we're cleaning up
             if (!shouldBeActive && !cleanInactive) {
                 continue;
             }
 
-            this.processElement(el, shouldBeActive);
+            this.processElement(element, shouldBeActive);
         }
     }
 
-    private processElement(el: YoutubeElement, shouldBeActive: boolean) {
-        // 1. Run Special Logic (Strategy Pattern)
-        const handler = SPECIAL_HANDLERS[el.id];
+    destroy(): void {
+        this.observer?.disconnect();
+        this.observer = null;
+        this.elementsByPageType.clear();
+        this.isInitialized = false;
+    }
 
-        // We select nodes for standard processing, also passed to handler
-        const nodes = selectByXPath(el.selector);
+    /**
+     * Builds a lookup map of elements indexed by page type for filtering.
+     */
+    private buildPageTypeLookup(): void {
+        this.elementsByPageType.clear();
 
+        for (const element of this.elements) {
+            const pageTypes = element.pageTypes;
+
+            if (!pageTypes || pageTypes.length === 0) {
+                // Global elements apply to all pages
+                this.addToPageTypeLookup('global', element);
+            } else {
+                // Page-specific elements
+                for (const pageType of pageTypes) {
+                    this.addToPageTypeLookup(pageType, element);
+                }
+            }
+        }
+    }
+
+    private addToPageTypeLookup(key: PageType | 'global', element: YoutubeElement): void {
+        const existing = this.elementsByPageType.get(key);
+        if (existing) {
+            existing.push(element);
+        } else {
+            this.elementsByPageType.set(key, [element]);
+        }
+    }
+
+    /**
+     * Gets elements relevant to the current page type.
+     */
+    private getRelevantElements(): YoutubeElement[] {
+        const globalElements = this.elementsByPageType.get('global') ?? [];
+        const pageElements = this.cachedPageType
+            ? (this.elementsByPageType.get(this.cachedPageType) ?? [])
+            : [];
+
+        return [...globalElements, ...pageElements];
+    }
+
+    private setupObserver(): void {
+        this.observer?.disconnect();
+
+        const debouncedApply = debounce(() => this.applyAllElements(false), OBSERVER_DEBOUNCE_MS);
+
+        this.observer = new MutationObserver(debouncedApply);
+
+        if (document.body) {
+            this.observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+            });
+        }
+    }
+
+    /**
+     * Processes a single element: runs special handlers and applies/removes styles.
+     */
+    private processElement(element: YoutubeElement, shouldBeActive: boolean): void {
+        const nodes = selectByXPath(element.selector);
+
+        // Run special handler if one exists for this element
+        const handler = SPECIAL_HANDLERS[element.id];
         if (handler) {
-            // Handler manages its own apply/revert logic based on "shouldBeActive"
-            // We pass the nodes we found, but the handler might look up others (e.g. sidebar)
-            handler({ element: el, nodes, active: shouldBeActive });
+            try {
+                handler({
+                    element,
+                    nodes,
+                    active: shouldBeActive,
+                });
+            } catch (error) {
+                console.error(`[AQT] Handler error for ${element.id}:`, error);
+            }
         }
 
-        // 2. Standard CSS Property Toggle
-        // For standard processing:
-        // If Active: apply style
-        // If Inactive: remove style
-        const property = el.property || 'display';
-        const value = el.style || 'none';
+        this.applyStyles(nodes, element, shouldBeActive);
+    }
 
-        nodes.forEach((node) => {
-            const styleKey = `${property}:${value}`;
+    /**
+     * Applies or removes CSS styles from nodes based on the active state.
+     */
+    private applyStyles(
+        nodes: readonly HTMLElement[],
+        element: YoutubeElement,
+        shouldBeActive: boolean,
+    ): void {
+        const property = element.property ?? DEFAULT_PROPERTY;
+        const value = element.style ?? DEFAULT_STYLE;
+        const styleKey = `${property}:${value}`;
+
+        for (const node of nodes) {
             const currentStyle = this.appliedStyles.get(node);
 
             if (shouldBeActive) {
-                // Only apply if not already applied
+                // Only apply if not already applied with same style
                 if (currentStyle !== styleKey) {
-                    node.style.setProperty(property, value, 'important');
-                    this.appliedStyles.set(node, styleKey);
+                    try {
+                        node.style.setProperty(property, value, 'important');
+                        this.appliedStyles.set(node, styleKey);
+                    } catch {
+                        // Style application might fail for some edge cases
+                    }
                 }
             } else if (currentStyle) {
-                // Only remove if currently applied
-                node.style.removeProperty(property);
-                this.appliedStyles.delete(node);
+                // Only remove if we previously applied a style
+                try {
+                    node.style.removeProperty(property);
+                    this.appliedStyles.delete(node);
+                } catch {
+                    // Style removal might fail for some edge cases
+                }
             }
-        });
+        }
     }
 }

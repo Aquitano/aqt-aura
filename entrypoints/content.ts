@@ -3,47 +3,83 @@ import { OverlayManager } from '@/utils/overlay';
 import { PLAYBACK_SPEED_KEY, PlaybackManager } from '@/utils/playback';
 import { STORAGE_KEY } from '@/utils/youtube';
 
+/**
+ * Main content script entry point for the YouTube enhancement extension.
+ * Sets up element management, playback control, and navigation handling.
+ */
 export default defineContentScript({
     matches: ['*://www.youtube.com/*', '*://m.youtube.com/*'],
+
     async main() {
-        console.log('AQT Browser (YouTube Elements) loaded');
-        const manager = new ElementManager();
-        await manager.initialize();
+        try {
+            // Initialize core managers
+            const elementManager = new ElementManager();
+            const playbackManager = new PlaybackManager();
 
-        const playbackManager = new PlaybackManager();
-        await playbackManager.initialize();
+            await Promise.all([
+                elementManager.initialize(),
+                playbackManager.initialize(),
+            ]);
 
-        const overlayManager = new OverlayManager(playbackManager);
-        overlayManager.initialize();
+            const overlayManager = new OverlayManager(playbackManager);
+            overlayManager.initialize();
 
-        manager.applyAllElements();
+            elementManager.applyAllElements();
+            setupStorageListeners(elementManager, playbackManager);
+            setupNavigationListeners(elementManager, playbackManager);
+        } catch (error) {
+            console.error('[AQT] Failed to initialize content script:', error);
+        }
+    },
+});
 
-        // Listen for storage changes
-        browser.storage.local.onChanged.addListener((changes) => {
-            if (!changes[STORAGE_KEY]) return;
-            console.log('New YouTube elements settings received');
+/**
+ * Sets up listeners for storage changes to react to settings updates.
+ */
+function setupStorageListeners(
+    elementManager: ElementManager,
+    playbackManager: PlaybackManager,
+): void {
+    browser.storage.local.onChanged.addListener((changes) => {
+        try {
+            // Handle element settings changes
+            if (changes[STORAGE_KEY]?.newValue !== undefined) {
+                elementManager.updateElements(changes[STORAGE_KEY].newValue);
+            }
 
-            manager.updateElements(changes[STORAGE_KEY].newValue);
-        });
-
-        browser.storage.local.onChanged.addListener((changes) => {
-            if (changes[PLAYBACK_SPEED_KEY]) {
-                const newSpeed = changes[PLAYBACK_SPEED_KEY].newValue;
-                if (typeof newSpeed === 'number') {
+            // Handle playback speed changes
+            if (changes[PLAYBACK_SPEED_KEY]?.newValue !== undefined) {
+                const newSpeed: unknown = changes[PLAYBACK_SPEED_KEY].newValue;
+                if (typeof newSpeed === 'number' && Number.isFinite(newSpeed)) {
                     playbackManager.setSpeed(newSpeed);
                 }
             }
-        });
+        } catch (error) {
+            console.error('[AQT] Error handling storage change:', error);
+        }
+    });
+}
 
-        // Listen for navigation
-        globalThis.addEventListener('popstate', () => {
-            manager.updatePageType();
-            manager.applyAllElements();
-        });
-        globalThis.addEventListener('yt-navigate-finish', () => {
-            manager.updatePageType();
-            manager.applyAllElements();
+/**
+ * Sets up navigation listeners to handle YouTube's SPA navigation.
+ */
+function setupNavigationListeners(
+    elementManager: ElementManager,
+    playbackManager: PlaybackManager,
+): void {
+    const handleNavigation = () => {
+        try {
+            elementManager.updatePageType();
+            elementManager.applyAllElements();
             playbackManager.reapply();
-        });
-    },
-});
+        } catch (error) {
+            console.error('[AQT] Error handling navigation:', error);
+        }
+    };
+
+    // Browser back/forward navigation
+    globalThis.addEventListener('popstate', handleNavigation);
+
+    // YouTube's custom navigation event
+    globalThis.addEventListener('yt-navigate-finish', handleNavigation);
+}

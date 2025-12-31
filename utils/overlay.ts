@@ -1,88 +1,149 @@
+import { safeQuerySelector } from './dom';
 import { PlaybackManager } from './playback';
 
+/** DOM element IDs used by the overlay */
+const OVERLAY_ID = 'aqt-speed-overlay';
+const MENU_ID = 'aqt-speed-menu';
+const SLIDER_CSS_ID = 'aqt-slider-css';
+
+/** Speed control bounds */
+const MIN_SPEED = 0.25;
+const MAX_SPEED = 16;
+const SLIDER_MAX = 3;
+const SPEED_STEP = 0.25;
+const DEFAULT_SPEED = 1;
+
+/** Menu hide delay in milliseconds */
+const MENU_HIDE_DELAY_MS = 300;
+const MENU_TRANSITION_MS = 200;
+
+/** CSS for the speed slider */
+const SLIDER_CSS = `
+    .aqt-speed-slider {
+        -webkit-appearance: none;
+        width: 120px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+    }
+    .aqt-speed-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        background: #fff;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+        transition: transform 0.1s;
+    }
+    .aqt-speed-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+    }
+`;
+
+/**
+ * Manages the speed control overlay in YouTube's video player.
+ */
 export class OverlayManager {
-    private playbackManager: PlaybackManager;
+    private readonly playbackManager: PlaybackManager;
     private container: HTMLElement | null = null;
     private speedText: HTMLElement | null = null;
-    private observer: MutationObserver | null = null;
     private menu: HTMLElement | null = null;
-    private menuTimeout: number | undefined;
-
     private sliderElement: HTMLInputElement | null = null;
+    private menuTimeout: ReturnType<typeof setTimeout> | undefined;
+    private controlsObserver: MutationObserver | null = null;
+    private bodyObserver: MutationObserver | null = null;
 
     constructor(playbackManager: PlaybackManager) {
         this.playbackManager = playbackManager;
     }
 
-    public initialize() {
+    initialize(): void {
         this.injectOverlay();
         this.startObserving();
         this.syncWithVideo();
     }
 
-    // ... (existing methods)
+    destroy(): void {
+        this.clearMenuTimeout();
+        this.controlsObserver?.disconnect();
+        this.bodyObserver?.disconnect();
+        this.container?.remove();
+        document.getElementById(SLIDER_CSS_ID)?.remove();
+    }
 
-    private injectSliderStyles() {
-        if (document.getElementById('aqt-slider-css')) return;
+    private injectSliderStyles(): void {
+        if (document.getElementById(SLIDER_CSS_ID)) {
+            return;
+        }
+
         const style = document.createElement('style');
-        style.id = 'aqt-slider-css';
-        style.innerHTML = `
-            .aqt-speed-slider {
-                -webkit-appearance: none;
-                width: 120px;
-                height: 4px;
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 2px;
-                outline: none;
-                cursor: pointer;
-            }
-            .aqt-speed-slider::-webkit-slider-thumb {
-                -webkit-appearance: none;
-                width: 14px;
-                height: 14px;
-                background: #fff;
-                border-radius: 50%;
-                cursor: pointer;
-                box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
-                transition: transform 0.1s;
-            }
-            .aqt-speed-slider::-webkit-slider-thumb:hover {
-                transform: scale(1.2);
-            }
-        `;
+        style.id = SLIDER_CSS_ID;
+        style.textContent = SLIDER_CSS;
         document.head.appendChild(style);
     }
 
-    private syncWithVideo() {
-        const video = document.querySelector('video');
-        if (video) {
+    /**
+     * Sets up video rate change listeners.
+     */
+    private syncWithVideo(): void {
+        const attachVideoListener = (video: HTMLVideoElement) => {
             video.addEventListener('ratechange', () => {
                 this.updateDisplay(video.playbackRate);
             });
             this.updateDisplay(video.playbackRate);
+        };
+
+        const video = safeQuerySelector<HTMLVideoElement>('video');
+        if (video) {
+            attachVideoListener(video);
         }
 
-        // Also watch for new videos
+        // Watch for navigation to re-attach listeners
         document.addEventListener('yt-navigate-finish', () => {
-            const v = document.querySelector('video');
-            if (v) {
-                this.updateDisplay(v.playbackRate);
-                v.addEventListener('ratechange', () => this.updateDisplay(v.playbackRate));
+            const newVideo = safeQuerySelector<HTMLVideoElement>('video');
+            if (newVideo) {
+                attachVideoListener(newVideo);
             }
-            this.injectOverlay(); // Re-inject if lost
+            this.injectOverlay();
         });
     }
 
-    private injectOverlay() {
-        if (document.getElementById('aqt-speed-overlay')) return;
+    /**
+     * Injects the speed control overlay into YouTube's player controls.
+     */
+    private injectOverlay(): void {
+        if (document.getElementById(OVERLAY_ID)) {
+            return;
+        }
 
-        const rightControls = document.querySelector('.ytp-right-controls');
-        if (!rightControls) return;
+        const rightControls = safeQuerySelector('.ytp-right-controls');
+        if (!rightControls) {
+            return;
+        }
 
-        // Create Container
+        try {
+            this.createContainer();
+            this.createSpeedText();
+            this.createMenu();
+            this.attachInteractionListeners();
+
+            if (this.container) {
+                rightControls.prepend(this.container);
+            }
+        } catch (error) {
+            console.error('[AQT] Failed to inject overlay:', error);
+        }
+    }
+
+    /**
+     * Creates the main container element.
+     */
+    private createContainer(): void {
         this.container = document.createElement('div');
-        this.container.id = 'aqt-speed-overlay';
-        // Do NOT use ytp-button class on the container as it likely has overflow: hidden
+        this.container.id = OVERLAY_ID;
         Object.assign(this.container.style, {
             display: 'inline-flex',
             alignItems: 'center',
@@ -91,21 +152,23 @@ export class OverlayManager {
             height: '100%',
             verticalAlign: 'top',
             minWidth: '40px',
-            marginRight: '8px', // Spacing from other controls
-            zIndex: '6000', // High z-index to sit above potential overlays?
+            marginRight: '8px',
+            zIndex: '6000',
         });
+    }
 
-        // Text Button (The visible part)
+    private createSpeedText(): void {
         this.speedText = document.createElement('span');
-        this.speedText.innerText = '1.0x';
-        this.speedText.className = 'ytp-button'; // Apply styling here if needed, or manual style
+        this.speedText.textContent = '1.0x';
+        this.speedText.className = 'ytp-button';
+        this.speedText.title = 'Click to reset, Scroll to change';
         Object.assign(this.speedText.style, {
             fontSize: '109%',
             fontWeight: 'bold',
             lineHeight: '1',
             cursor: 'pointer',
             textAlign: 'center',
-            color: '#fff', // Ensure visible
+            color: '#fff',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -114,20 +177,23 @@ export class OverlayManager {
             border: 'none',
             background: 'none',
         });
-        this.speedText.title = 'Click to reset, Scroll to change';
-        this.container.appendChild(this.speedText);
+        this.container?.appendChild(this.speedText);
+    }
 
-        // --- Menu (Horizontal Slider) ---
+    /**
+     * Creates the speed control menu with slider.
+     */
+    private createMenu(): void {
         this.menu = document.createElement('div');
-        this.menu.id = 'aqt-speed-menu';
+        this.menu.id = MENU_ID;
         Object.assign(this.menu.style, {
             display: 'none',
             position: 'absolute',
             bottom: '49px',
             left: '50%',
-            transform: 'translateX(-50%) translateY(8px)', // Start slightly lower for pop up effect
+            transform: 'translateX(-50%) translateY(8px)',
             backgroundColor: 'rgba(20, 20, 20, 0.9)',
-            borderRadius: '24px', // Pill shape
+            borderRadius: '24px',
             padding: '8px 16px',
             zIndex: '7000',
             whiteSpace: 'nowrap',
@@ -137,14 +203,24 @@ export class OverlayManager {
             pointerEvents: 'none',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255,255,255,0.08)',
-            // display: 'flex', // Handled by showMenu toggling from none to flex
             alignItems: 'center',
             gap: '12px',
         });
 
-        // 1. Reset Button (Icon)
+        // Reset button
+        const resetBtn = this.createResetButton();
+        this.menu.appendChild(resetBtn);
+
+        // Speed slider
+        this.sliderElement = this.createSlider();
+        this.menu.appendChild(this.sliderElement);
+
+        this.container?.appendChild(this.menu);
+    }
+
+    private createResetButton(): HTMLElement {
         const resetBtn = document.createElement('div');
-        resetBtn.innerHTML = '↺'; // Or SVG icon
+        resetBtn.textContent = '↺';
         resetBtn.title = 'Reset to 1.0x';
         Object.assign(resetBtn.style, {
             cursor: 'pointer',
@@ -155,162 +231,181 @@ export class OverlayManager {
             justifyContent: 'center',
             transition: 'color 0.2s',
         });
-        resetBtn.addEventListener('mouseenter', () => (resetBtn.style.color = '#fff'));
-        resetBtn.addEventListener('mouseleave', () => (resetBtn.style.color = '#aaa'));
+
+        resetBtn.addEventListener('mouseenter', () => {
+            resetBtn.style.color = '#fff';
+        });
+        resetBtn.addEventListener('mouseleave', () => {
+            resetBtn.style.color = '#aaa';
+        });
         resetBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.playbackManager.setSpeed(1);
+            this.playbackManager.setSpeed(DEFAULT_SPEED);
         });
-        this.menu.appendChild(resetBtn);
 
-        // 2. Slider Input
-        const slider = document.createElement('input');
-        slider.type = 'range';
-        slider.min = '0.25';
-        slider.max = '3'; // Logical range for a slider. 5x is too long? Let's go to 3, maybe extend if needed.
-        slider.step = '0.05';
-        slider.value = '1';
+        return resetBtn;
+    }
 
-        // Custom styling for slider is tricky in JS, usually needs CSS classes.
-        // We'll apply basic inline styles and use a style tag for pseudo-elements if needed,
-        // or just rely on basic appearance for now, refining later.
-        // Let's inject a specialized style block for this slider into the head to make it beautiful.
+    private createSlider(): HTMLInputElement {
         this.injectSliderStyles();
 
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = String(MIN_SPEED);
+        slider.max = String(SLIDER_MAX);
+        slider.step = '0.05';
+        slider.value = String(DEFAULT_SPEED);
         slider.className = 'aqt-speed-slider';
 
-        // Sync slider -> playback
         slider.addEventListener('input', (e) => {
             e.stopPropagation();
-            const val = parseFloat((e.target as HTMLInputElement).value);
-            this.playbackManager.setSpeed(val);
-            // Keep menu open while dragging
-            this.showMenu(true);
+            const target = e.target as HTMLInputElement;
+            const value = Number.parseFloat(target.value);
+            if (Number.isFinite(value)) {
+                this.playbackManager.setSpeed(value);
+                this.showMenu();
+            }
         });
 
-        // Sync playback -> slider
-        // This is handled via syncWithVideo updateDisplay, we need to update slider value too.
-        // We'll attach specific listeners later or in the main loop.
-        // Let's attach a property to this instance so we can update it.
-        this.sliderElement = slider;
+        return slider;
+    }
 
-        this.menu.appendChild(slider);
+    private attachInteractionListeners(): void {
+        if (!this.container || !this.speedText) {
+            return;
+        }
 
-        this.container.appendChild(this.menu);
-
-        // --- Interaction Listeners ---
-
-        // Hover to show menu
+        // Hover to show/hide menu
         this.container.addEventListener('mouseenter', () => this.showMenu());
         this.container.addEventListener('mouseleave', () => this.scheduleHideMenu());
 
-        // Click Text to Reset
+        // Click to reset speed
         this.speedText.addEventListener('click', (e) => {
-            e.stopPropagation(); // Don't want bubbling to weird places
-            this.playbackManager.setSpeed(1);
+            e.stopPropagation();
+            this.playbackManager.setSpeed(DEFAULT_SPEED);
         });
 
-        // Scroll to Change
+        // Scroll to change speed
         this.container.addEventListener(
             'wheel',
             (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-
-                const video = document.querySelector('video');
-                if (!video) return;
-
-                let current = video.playbackRate;
-                const direction = e.deltaY > 0 ? -1 : 1;
-                const step = 0.25;
-                let newSpeed = current + direction * step;
-                newSpeed = Math.max(0.25, Math.min(newSpeed, 16));
-                newSpeed = Math.round(newSpeed * 100) / 100;
-
-                this.playbackManager.setSpeed(newSpeed);
+                this.handleWheelEvent(e);
             },
             { passive: false },
         );
-
-        rightControls.prepend(this.container);
     }
 
-    private showMenu(keepOpen = false) {
-        if (this.menuTimeout) globalThis.clearTimeout(this.menuTimeout);
-        if (this.menu) {
-            if (this.menu.style.display !== 'flex') {
-                this.menu.style.display = 'flex';
-                this.menu.style.pointerEvents = 'auto';
-                // Slight delay to allow display:block to apply before opacity transition
-                requestAnimationFrame(() => {
-                    if (this.menu) {
-                        this.menu.style.opacity = '1';
-                        this.menu.style.transform = 'translateX(-50%) translateY(0)';
-                    }
-                });
-            } else {
-                if (this.menu) this.menu.style.opacity = '1'; // Ensure visible overrides any hide
-            }
+    private handleWheelEvent(e: WheelEvent): void {
+        const video = safeQuerySelector<HTMLVideoElement>('video');
+        if (!video) {
+            return;
         }
+
+        const current = video.playbackRate;
+        const direction = e.deltaY > 0 ? -1 : 1;
+        let newSpeed = current + direction * SPEED_STEP;
+        newSpeed = Math.max(MIN_SPEED, Math.min(newSpeed, MAX_SPEED));
+        newSpeed = Math.round(newSpeed * 100) / 100;
+
+        this.playbackManager.setSpeed(newSpeed);
     }
 
-    private scheduleHideMenu() {
-        this.menuTimeout = globalThis.setTimeout(() => {
-            this.hideMenu();
-        }, 300) as unknown as number;
-    }
+    private showMenu(): void {
+        this.clearMenuTimeout();
 
-    private hideMenu() {
-        if (this.menu) {
-            this.menu.style.opacity = '0';
-            this.menu.style.transform = 'translateX(-50%) translateY(8px)'; // Slide down slightly
-            this.menu.style.pointerEvents = 'none';
-            // Wait for transition
-            setTimeout(() => {
-                if (this.menu && this.menu.style.opacity === '0') {
-                    this.menu.style.display = 'none';
+        if (!this.menu) {
+            return;
+        }
+
+        const isHidden = this.menu.style.display === 'none' || this.menu.style.display === '';
+
+        if (isHidden) {
+            this.menu.style.display = 'flex';
+            this.menu.style.pointerEvents = 'auto';
+            requestAnimationFrame(() => {
+                if (this.menu) {
+                    this.menu.style.opacity = '1';
+                    this.menu.style.transform = 'translateX(-50%) translateY(0)';
                 }
-            }, 200);
+            });
+        } else {
+            this.menu.style.opacity = '1';
         }
     }
 
-    private updateDisplay(speed: number) {
-        if (this.speedText) {
-            this.speedText.innerText = speed.toFixed(speed % 1 === 0 ? 0 : 2) + 'x';
+    private scheduleHideMenu(): void {
+        this.menuTimeout = setTimeout(() => {
+            this.hideMenu();
+        }, MENU_HIDE_DELAY_MS);
+    }
+
+    private hideMenu(): void {
+        if (!this.menu) {
+            return;
         }
-        const slider = (this as any).sliderElement as HTMLInputElement;
-        if (slider) {
-            // Only update if not currently being dragged?
-            // Actually standard inputs handle this well usually, or we can check focus.
-            // If the user is dragging, the 'input' event fires and sets speed.
-            // If the user uses controls (e.g. keybinds), we want the slider to move.
-            // If the value is close, don't update to avoid jitter during drag loop?
-            if (document.activeElement !== slider) {
-                slider.value = speed.toString();
+
+        this.menu.style.opacity = '0';
+        this.menu.style.transform = 'translateX(-50%) translateY(8px)';
+        this.menu.style.pointerEvents = 'none';
+
+        setTimeout(() => {
+            if (this.menu?.style.opacity === '0') {
+                this.menu.style.display = 'none';
             }
+        }, MENU_TRANSITION_MS);
+    }
+
+    private clearMenuTimeout(): void {
+        if (this.menuTimeout !== undefined) {
+            clearTimeout(this.menuTimeout);
+            this.menuTimeout = undefined;
         }
     }
 
-    private startObserving() {
-        // Observe control bar to re-inject if cleared
-        const observer = new MutationObserver(() => {
+    /**
+     * Updates the speed display text and slider.
+     */
+    private updateDisplay(speed: number): void {
+        if (this.speedText) {
+            const displayText = speed % 1 === 0 ? speed.toFixed(0) : speed.toFixed(2);
+            this.speedText.textContent = `${displayText}x`;
+        }
+
+        if (this.sliderElement && document.activeElement !== this.sliderElement) {
+            this.sliderElement.value = speed.toString();
+        }
+    }
+
+    /**
+     * Sets up mutation observers to re-inject overlay when controls change.
+     */
+    private startObserving(): void {
+        this.controlsObserver = new MutationObserver(() => {
             this.injectOverlay();
         });
 
-        const controls = document.querySelector('.ytp-right-controls');
+        const controls = safeQuerySelector('.ytp-right-controls');
         if (controls) {
-            observer.observe(controls.parentElement || document.body, { childList: true, subtree: true });
+            const parent = controls.parentElement ?? document.body;
+            this.controlsObserver.observe(parent, { childList: true, subtree: true });
         } else {
-            // If controls not found yet, observe body until found
-            const bodyObserver = new MutationObserver(() => {
-                const c = document.querySelector('.ytp-right-controls');
-                if (c) {
+            // Wait for controls to appear
+            this.bodyObserver = new MutationObserver(() => {
+                const foundControls = safeQuerySelector('.ytp-right-controls');
+                if (foundControls && this.controlsObserver) {
                     this.injectOverlay();
-                    observer.observe(c.parentElement || document.body, { childList: true, subtree: true });
-                    bodyObserver.disconnect();
+                    const parent = foundControls.parentElement ?? document.body;
+                    this.controlsObserver.observe(parent, { childList: true, subtree: true });
+                    this.bodyObserver?.disconnect();
+                    this.bodyObserver = null;
                 }
             });
-            bodyObserver.observe(document.body, { childList: true, subtree: true });
+
+            if (document.body) {
+                this.bodyObserver.observe(document.body, { childList: true, subtree: true });
+            }
         }
     }
 }
