@@ -1,21 +1,17 @@
 import { safeQuerySelector } from './dom';
 import { YoutubeElement } from './youtube';
 
-/** Context passed to each custom handler */
 export interface HandlerContext {
     readonly element: YoutubeElement;
     readonly nodes: readonly HTMLElement[];
     readonly active: boolean;
 }
 
-/** Custom handler function signature */
 export type CustomHandler = (ctx: HandlerContext) => void;
 
-/** Constants for reusable style values */
 const BORDER_STYLE = '1px solid var(--yt-spec-10-percent-layer)';
 const CUSTOM_THUMB_ID = 'video-thumbnail-aqt';
 
-/** Selectors used by handlers */
 const SELECTORS = {
     videoContainer: 'ytd-app[guide-persistent-and-visible] ytd-page-manager.ytd-app',
     secondaryResults: 'ytd-watch-next-secondary-results-renderer div#items',
@@ -24,9 +20,6 @@ const SELECTORS = {
     clipsSection: 'ytd-guide-section-renderer',
 } as const;
 
-/**
- * Safely extracts video ID from the current URL.
- */
 function getVideoIdFromUrl(): string | null {
     try {
         const url = new URL(document.URL);
@@ -36,9 +29,6 @@ function getVideoIdFromUrl(): string | null {
     }
 }
 
-/**
- * Adjusts the video container margin when sidebar visibility changes.
- */
 const handleSidebar: CustomHandler = ({ active }) => {
     const videoContainer = safeQuerySelector<HTMLElement>(SELECTORS.videoContainer);
     if (videoContainer) {
@@ -46,9 +36,6 @@ const handleSidebar: CustomHandler = ({ active }) => {
     }
 };
 
-/**
- * Adds or removes a video thumbnail preview in the sidebar.
- */
 const handleVideoThumbnail: CustomHandler = ({ active }) => {
     const existingThumb = document.getElementById(CUSTOM_THUMB_ID);
 
@@ -91,9 +78,6 @@ const handleVideoThumbnail: CustomHandler = ({ active }) => {
     }
 };
 
-/**
- * Sets the disabled property on nodes (for YouTube custom elements).
- */
 const handleDisabledProp: CustomHandler = ({ nodes, active }) => {
     for (const node of nodes) {
         try {
@@ -104,9 +88,6 @@ const handleDisabledProp: CustomHandler = ({ nodes, active }) => {
     }
 };
 
-/**
- * Adjusts the frosted glass header height when tabs are hidden.
- */
 const handleTabs: CustomHandler = ({ active }) => {
     const frosted = safeQuerySelector<HTMLElement>(SELECTORS.frostedGlass);
     if (frosted) {
@@ -114,9 +95,6 @@ const handleTabs: CustomHandler = ({ active }) => {
     }
 };
 
-/**
- * Adjusts the "You" section border in the sidebar.
- */
 const handleYouSection: CustomHandler = ({ active }) => {
     const elem = safeQuerySelector<HTMLElement>(SELECTORS.youSection);
     if (elem) {
@@ -124,9 +102,6 @@ const handleYouSection: CustomHandler = ({ active }) => {
     }
 };
 
-/**
- * Adjusts the "My Clips" section border in the sidebar.
- */
 const handleMyClips: CustomHandler = ({ active }) => {
     const elem = safeQuerySelector<HTMLElement>(SELECTORS.clipsSection);
     if (elem) {
@@ -134,9 +109,6 @@ const handleMyClips: CustomHandler = ({ active }) => {
     }
 };
 
-/**
- * Pauses channel trailer videos when the feature is active.
- */
 const handleChannelTrailer: CustomHandler = ({ nodes, active }) => {
     if (!active) return;
 
@@ -152,9 +124,6 @@ const handleChannelTrailer: CustomHandler = ({ nodes, active }) => {
     }
 };
 
-/**
- * Redirects YouTube Shorts URLs to the regular video player.
- */
 const handleRedirectShorts: CustomHandler = ({ active }) => {
     if (!active) return;
 
@@ -173,10 +142,6 @@ const handleRedirectShorts: CustomHandler = ({ active }) => {
     }
 };
 
-/**
- * Registry of special handlers for elements that need custom logic
- * beyond simple CSS property toggling.
- */
 export const SPECIAL_HANDLERS: Readonly<Record<string, CustomHandler>> = {
     sidebar: handleSidebar,
     'video-thumbnail': handleVideoThumbnail,

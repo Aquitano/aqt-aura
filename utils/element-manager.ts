@@ -3,17 +3,12 @@ import { mergeWithDefaults } from './storage';
 import { DEFAULT_ELEMENTS, PageType, STORAGE_KEY, YoutubeElement } from './youtube';
 import { SPECIAL_HANDLERS } from './youtube-handlers';
 
-/** Default debounce delay for mutation observer callbacks */
 const OBSERVER_DEBOUNCE_MS = 50;
 
 /** Default CSS property and value for hiding elements */
 const DEFAULT_PROPERTY = 'display';
 const DEFAULT_STYLE = 'none';
 
-/**
- * Manages YouTube page elements visibility and custom behaviors.
- * Handles element selection, style application, and special element handlers.
- */
 export class ElementManager {
     private elements: YoutubeElement[] = [];
     private observer: MutationObserver | null = null;
@@ -24,10 +19,6 @@ export class ElementManager {
 
     private readonly appliedStyles = new WeakMap<HTMLElement, string>();
 
-    /**
-     * Initializes the element manager by loading stored preferences
-     * and setting up the mutation observer.
-     */
     async initialize(): Promise<void> {
         if (this.isInitialized) {
             return;
@@ -49,34 +40,22 @@ export class ElementManager {
         }
     }
 
-    /**
-     * Updates elements with new configuration from storage.
-     * Forces a cleanup of inactive elements.
-     */
     updateElements(newElements: unknown): void {
         this.elements = mergeWithDefaults(DEFAULT_ELEMENTS, newElements);
         this.buildPageTypeLookup();
         this.applyAllElements(true);
     }
 
-    /**
-     * Updates the cached page type based on current URL.
-     */
     updatePageType(): void {
         this.cachedPageType = getCurrentPageType();
     }
 
-    /**
-     * Applies all relevant elements for the current page.
-     * @param cleanInactive - When true, also removes styles from inactive elements
-     */
     applyAllElements(cleanInactive = false): void {
         const relevantElements = this.getRelevantElements();
 
         for (const element of relevantElements) {
             const shouldBeActive = element.checked;
 
-            // Skip inactive elements unless we're cleaning up
             if (!shouldBeActive && !cleanInactive) {
                 continue;
             }
@@ -92,9 +71,6 @@ export class ElementManager {
         this.isInitialized = false;
     }
 
-    /**
-     * Builds a lookup map of elements indexed by page type for filtering.
-     */
     private buildPageTypeLookup(): void {
         this.elementsByPageType.clear();
 
@@ -122,14 +98,9 @@ export class ElementManager {
         }
     }
 
-    /**
-     * Gets elements relevant to the current page type.
-     */
     private getRelevantElements(): YoutubeElement[] {
         const globalElements = this.elementsByPageType.get('global') ?? [];
-        const pageElements = this.cachedPageType
-            ? (this.elementsByPageType.get(this.cachedPageType) ?? [])
-            : [];
+        const pageElements = this.cachedPageType ? (this.elementsByPageType.get(this.cachedPageType) ?? []) : [];
 
         return [...globalElements, ...pageElements];
     }
@@ -149,13 +120,9 @@ export class ElementManager {
         }
     }
 
-    /**
-     * Processes a single element: runs special handlers and applies/removes styles.
-     */
     private processElement(element: YoutubeElement, shouldBeActive: boolean): void {
         const nodes = selectByXPath(element.selector);
 
-        // Run special handler if one exists for this element
         const handler = SPECIAL_HANDLERS[element.id];
         if (handler) {
             try {
@@ -172,14 +139,7 @@ export class ElementManager {
         this.applyStyles(nodes, element, shouldBeActive);
     }
 
-    /**
-     * Applies or removes CSS styles from nodes based on the active state.
-     */
-    private applyStyles(
-        nodes: readonly HTMLElement[],
-        element: YoutubeElement,
-        shouldBeActive: boolean,
-    ): void {
+    private applyStyles(nodes: readonly HTMLElement[], element: YoutubeElement, shouldBeActive: boolean): void {
         const property = element.property ?? DEFAULT_PROPERTY;
         const value = element.style ?? DEFAULT_STYLE;
         const styleKey = `${property}:${value}`;

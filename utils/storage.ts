@@ -1,14 +1,10 @@
 import { YoutubeElement } from './youtube';
 
-/** Minimal shape required for a stored element to be valid */
 interface StoredElementShape {
     id: string;
     checked?: unknown;
 }
 
-/**
- * Type guard to check if an object has the minimal stored element shape.
- */
 function isValidStoredElement(value: unknown): value is StoredElementShape {
     return (
         typeof value === 'object' &&
@@ -18,9 +14,6 @@ function isValidStoredElement(value: unknown): value is StoredElementShape {
     );
 }
 
-/**
- * Safely parses stored data into an array of elements.
- */
 function parseStoredElements(stored: unknown): Map<string, StoredElementShape> {
     const byId = new Map<string, StoredElementShape>();
 
@@ -37,11 +30,6 @@ function parseStoredElements(stored: unknown): Map<string, StoredElementShape> {
     return byId;
 }
 
-/**
- * Merges the default configuration with stored user preferences.
- * This ensures that users get new defaults if the extension updates,
- * while preserving their toggled choices.
- */
 export function mergeWithDefaults(defaults: readonly YoutubeElement[], stored: unknown): YoutubeElement[] {
     const storedElements = parseStoredElements(stored);
 

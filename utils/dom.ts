@@ -1,13 +1,7 @@
 import { PAGE_TYPES, PageType } from './youtube';
 
-/** Timeout handle type for cross-platform compatibility */
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 
-/**
- * Creates a debounced version of the provided function.
- * The debounced function delays invoking `func` until after `wait` milliseconds
- * have elapsed since the last time the debounced function was invoked.
- */
 export function debounce<T extends (...args: unknown[]) => void>(
     func: T,
     wait: number,
@@ -25,14 +19,6 @@ export function debounce<T extends (...args: unknown[]) => void>(
     };
 }
 
-/**
- * Evaluates an XPath expression and returns an array of matching HTMLElements.
- * Provides a safe wrapper around document.evaluate with proper error handling.
- *
- * @param selector - The XPath expression to evaluate
- * @param context - The context node for the XPath evaluation (defaults to document)
- * @returns An array of matching HTMLElements (empty array if none found or on error)
- */
 export function selectByXPath(selector: string, context: Node = document): HTMLElement[] {
     if (!selector) {
         return [];
@@ -41,13 +27,7 @@ export function selectByXPath(selector: string, context: Node = document): HTMLE
     const results: HTMLElement[] = [];
 
     try {
-        const snapshot = document.evaluate(
-            selector,
-            context,
-            null,
-            XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE,
-            null,
-        );
+        const snapshot = document.evaluate(selector, context, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
 
         for (let i = 0; i < snapshot.snapshotLength; i++) {
             const node = snapshot.snapshotItem(i);
@@ -88,11 +68,6 @@ const PAGE_TYPE_MATCHERS: ReadonlyArray<{ pattern: (url: string) => boolean; typ
     { pattern: (url) => url.includes('/@'), type: PAGE_TYPES.CHANNEL },
 ];
 
-/**
- * Determines the current YouTube page type based on the URL.
- *
- * @returns The detected page type or null if unknown
- */
 export function getCurrentPageType(): PageType | null {
     try {
         const url = globalThis.location.href;

@@ -1,23 +1,19 @@
 import { safeQuerySelector } from './dom';
 import { PlaybackManager } from './playback';
 
-/** DOM element IDs used by the overlay */
 const OVERLAY_ID = 'aqt-speed-overlay';
 const MENU_ID = 'aqt-speed-menu';
 const SLIDER_CSS_ID = 'aqt-slider-css';
 
-/** Speed control bounds */
 const MIN_SPEED = 0.25;
 const MAX_SPEED = 16;
 const SLIDER_MAX = 3;
 const SPEED_STEP = 0.25;
 const DEFAULT_SPEED = 1;
 
-/** Menu hide delay in milliseconds */
 const MENU_HIDE_DELAY_MS = 300;
 const MENU_TRANSITION_MS = 200;
 
-/** CSS for the speed slider */
 const SLIDER_CSS = `
     .aqt-speed-slider {
         -webkit-appearance: none;
@@ -43,9 +39,6 @@ const SLIDER_CSS = `
     }
 `;
 
-/**
- * Manages the speed control overlay in YouTube's video player.
- */
 export class OverlayManager {
     private readonly playbackManager: PlaybackManager;
     private container: HTMLElement | null = null;
@@ -85,9 +78,6 @@ export class OverlayManager {
         document.head.appendChild(style);
     }
 
-    /**
-     * Sets up video rate change listeners.
-     */
     private syncWithVideo(): void {
         const attachVideoListener = (video: HTMLVideoElement) => {
             video.addEventListener('ratechange', () => {
@@ -101,7 +91,6 @@ export class OverlayManager {
             attachVideoListener(video);
         }
 
-        // Watch for navigation to re-attach listeners
         document.addEventListener('yt-navigate-finish', () => {
             const newVideo = safeQuerySelector<HTMLVideoElement>('video');
             if (newVideo) {
@@ -111,9 +100,6 @@ export class OverlayManager {
         });
     }
 
-    /**
-     * Injects the speed control overlay into YouTube's player controls.
-     */
     private injectOverlay(): void {
         if (document.getElementById(OVERLAY_ID)) {
             return;
@@ -138,9 +124,6 @@ export class OverlayManager {
         }
     }
 
-    /**
-     * Creates the main container element.
-     */
     private createContainer(): void {
         this.container = document.createElement('div');
         this.container.id = OVERLAY_ID;
@@ -180,9 +163,6 @@ export class OverlayManager {
         this.container?.appendChild(this.speedText);
     }
 
-    /**
-     * Creates the speed control menu with slider.
-     */
     private createMenu(): void {
         this.menu = document.createElement('div');
         this.menu.id = MENU_ID;
@@ -207,11 +187,9 @@ export class OverlayManager {
             gap: '12px',
         });
 
-        // Reset button
         const resetBtn = this.createResetButton();
         this.menu.appendChild(resetBtn);
 
-        // Speed slider
         this.sliderElement = this.createSlider();
         this.menu.appendChild(this.sliderElement);
 
@@ -275,17 +253,14 @@ export class OverlayManager {
             return;
         }
 
-        // Hover to show/hide menu
         this.container.addEventListener('mouseenter', () => this.showMenu());
         this.container.addEventListener('mouseleave', () => this.scheduleHideMenu());
 
-        // Click to reset speed
         this.speedText.addEventListener('click', (e) => {
             e.stopPropagation();
             this.playbackManager.setSpeed(DEFAULT_SPEED);
         });
 
-        // Scroll to change speed
         this.container.addEventListener(
             'wheel',
             (e) => {
@@ -364,9 +339,6 @@ export class OverlayManager {
         }
     }
 
-    /**
-     * Updates the speed display text and slider.
-     */
     private updateDisplay(speed: number): void {
         if (this.speedText) {
             const displayText = speed % 1 === 0 ? speed.toFixed(0) : speed.toFixed(2);
@@ -378,9 +350,6 @@ export class OverlayManager {
         }
     }
 
-    /**
-     * Sets up mutation observers to re-inject overlay when controls change.
-     */
     private startObserving(): void {
         this.controlsObserver = new MutationObserver(() => {
             this.injectOverlay();
@@ -391,7 +360,6 @@ export class OverlayManager {
             const parent = controls.parentElement ?? document.body;
             this.controlsObserver.observe(parent, { childList: true, subtree: true });
         } else {
-            // Wait for controls to appear
             this.bodyObserver = new MutationObserver(() => {
                 const foundControls = safeQuerySelector('.ytp-right-controls');
                 if (foundControls && this.controlsObserver) {
