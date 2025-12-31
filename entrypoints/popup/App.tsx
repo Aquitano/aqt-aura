@@ -211,7 +211,7 @@ export default function App() {
             <header className="main-header">
                 <div className="header-brand">
                     <div className="logo-placeholder">AQT</div>
-                    <h1>AQT Browser</h1>
+                    <h1>AQT Aura</h1>
                 </div>
             </header>
 
