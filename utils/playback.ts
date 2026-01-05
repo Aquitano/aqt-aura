@@ -23,12 +23,19 @@ export class PlaybackManager {
         }
 
         try {
+            // Load saved speed, but only apply it automatically on non-music videos
             const storage = await browser.storage.local.get(PLAYBACK_SPEED_KEY);
             const storedSpeed: unknown = storage[PLAYBACK_SPEED_KEY];
-
             this.currentSpeed = this.validateSpeed(storedSpeed);
-            this.applySpeed();
+
+            const isMusic = this.isMusicVideo();
+            if (!isMusic) {
+                this.applySpeed();
+            }
+
+            // Start enforcement so manual changes work (applySpeed itself skips music videos)
             this.startEnforcement();
+
             this.isInitialized = true;
         } catch (error) {
             console.error('[AQT] Failed to initialize PlaybackManager:', error);
@@ -38,7 +45,7 @@ export class PlaybackManager {
     setSpeed(speed: number): void {
         const validatedSpeed = this.validateSpeed(speed);
         this.currentSpeed = validatedSpeed;
-        this.applySpeed();
+        this.applySpeed(true);
     }
 
     getSpeed(): number {
@@ -77,10 +84,35 @@ export class PlaybackManager {
         );
     }
 
-    private applySpeed(): void {
+    private isMusicVideo(): boolean {
+        if (document.querySelector('badge-shape[aria-label="Official Artist Channel"]')) {
+            return true;
+        }
+
+        const channelName = document.querySelector('#owner-name a')?.textContent;
+        if (channelName?.endsWith(' - Topic')) {
+            return true;
+        }
+
+        const musicIcon = document.querySelector('path[d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"]');
+        if (musicIcon) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private applySpeed(force = false): void {
         const video = this.getVideoElement();
         if (!video) {
             return;
+        }
+
+        if (!force) {
+            const isMusic = this.isMusicVideo();
+            if (isMusic) {
+                return; // Skip enforcement on YouTube Music videos unless forced
+            }
         }
 
         if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
@@ -141,6 +173,10 @@ export class PlaybackManager {
         video.setAttribute(ATTACHED_MARKER, 'true');
 
         video.addEventListener('ratechange', () => {
+            const isMusic = this.isMusicVideo();
+            if (isMusic) {
+                return; // Skip enforcement for music videos
+            }
             // Re-enforce speed if YouTube tried to change it
             if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
                 this.applySpeed();
