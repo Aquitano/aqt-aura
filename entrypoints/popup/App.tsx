@@ -6,7 +6,9 @@ import './App.css';
 import { HomeScreen } from './components/HomeScreen';
 import { YouTubeScreen } from './components/YouTubeScreen';
 
-type Screen = 'home' | 'youtube';
+import { TimeLimitScreen } from './components/TimeLimitScreen';
+
+type Screen = 'home' | 'youtube' | 'timelimits';
 
 export default function App() {
     const [screen, setScreen] = useState<Screen>('home');
@@ -60,9 +62,10 @@ export default function App() {
             </header>
 
             <main>
-                {screen === 'home' ? (
-                    <HomeScreen onNavigate={() => setScreen('youtube')} />
-                ) : (
+                {screen === 'home' && (
+                    <HomeScreen onNavigate={(s) => setScreen(s)} />
+                )}
+                {screen === 'youtube' && (
                     <YouTubeScreen
                         onBack={() => setScreen('home')}
                         elements={elements}
@@ -70,6 +73,9 @@ export default function App() {
                         playbackSpeed={playbackSpeed}
                         onSpeedChange={setPlaybackSpeed}
                     />
+                )}
+                {screen === 'timelimits' && (
+                    <TimeLimitScreen onBack={() => setScreen('home')} />
                 )}
             </main>
         </div>
