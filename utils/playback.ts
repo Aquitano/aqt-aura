@@ -45,7 +45,7 @@ export class PlaybackManager {
     setSpeed(speed: number): void {
         const validatedSpeed = this.validateSpeed(speed);
         this.currentSpeed = validatedSpeed;
-        this.applySpeed(true);
+        this.applySpeed();
     }
 
     getSpeed(): number {
@@ -85,34 +85,18 @@ export class PlaybackManager {
     }
 
     private isMusicVideo(): boolean {
-        if (document.querySelector('badge-shape[aria-label="Official Artist Channel"]')) {
-            return true;
-        }
-
-        const channelName = document.querySelector('#owner-name a')?.textContent;
-        if (channelName?.endsWith(' - Topic')) {
-            return true;
-        }
-
-        const musicIcon = document.querySelector('path[d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"]');
-        if (musicIcon) {
-            return true;
-        }
-
-        return false;
+        return !!document.querySelector('badge-shape[aria-label="Official Artist Channel"]');
     }
 
-    private applySpeed(force = false): void {
+    private applySpeed(): void {
         const video = this.getVideoElement();
         if (!video) {
             return;
         }
 
-        if (!force) {
-            const isMusic = this.isMusicVideo();
-            if (isMusic) {
-                return; // Skip enforcement on YouTube Music videos unless forced
-            }
+        const isMusic = this.isMusicVideo();
+        if (isMusic) {
+            return; // Skip enforcement on YouTube Music videos
         }
 
         if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
@@ -130,6 +114,10 @@ export class PlaybackManager {
         }
 
         this.intervalId = setInterval(() => {
+            const isMusic = this.isMusicVideo();
+            if (isMusic) {
+                return; // Skip enforcement for music videos
+            }
             this.applySpeed();
         }, ENFORCEMENT_INTERVAL_MS);
     }
