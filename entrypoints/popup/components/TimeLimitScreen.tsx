@@ -19,7 +19,7 @@ export function TimeLimitScreen({ onBack }: TimeLimitScreenProps) {
         };
         load();
 
-        const listener = (changes: any) => {
+        const listener = (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => {
             if (changes[DAILY_USAGE_KEY]) {
                 setUsage((changes[DAILY_USAGE_KEY].newValue as Record<string, number> | undefined) ?? {});
             }

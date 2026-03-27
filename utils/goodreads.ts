@@ -79,7 +79,7 @@ const SITE_CONFIGS: Readonly<Record<SiteKey, SiteConfig>> = Object.freeze({
 // Pre-computed regex for whitespace normalization
 const WHITESPACE_REGEX = /\s+/g;
 
-let cachedSiteKey: SiteKey | null | undefined;
+let cachedSiteKey: SiteKey | null = null;
 
 function detectCurrentSite(): SiteKey | null {
     const { hostname, pathname } = window.location;
@@ -94,9 +94,7 @@ function detectCurrentSite(): SiteKey | null {
 }
 
 export function getCurrentSite(): SiteKey | null {
-    if (cachedSiteKey === undefined) {
-        cachedSiteKey = detectCurrentSite();
-    }
+    cachedSiteKey ??= detectCurrentSite();
     return cachedSiteKey;
 }
 

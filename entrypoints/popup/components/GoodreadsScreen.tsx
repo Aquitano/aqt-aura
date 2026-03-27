@@ -23,14 +23,30 @@ interface SourceDisplayConfig {
 }
 
 // Derive display config from SOURCE_META
-const SOURCES: readonly SourceDisplayConfig[] = SOURCE_KEYS.map((key) => ({
-    key,
-    label: key === 'zlib' ? 'Z-Library' : key === 'anna' ? "Anna's Archive" : 'Project Gutenberg',
-    settingKey: `${key}Enabled` as keyof GoodlibSettings,
-    icon: SOURCE_META[key].glyph,
-    color: key === 'zlib' ? '#3273dc' : key === 'anna' ? '#00d1b2' : '#ffdd57',
-    textColor: key === 'gutenberg' ? '#333' : '#fff',
-}));
+const SOURCES: readonly SourceDisplayConfig[] = SOURCE_KEYS.map((key) => {
+    let label: string;
+    let color: string;
+
+    if (key === 'zlib') {
+        label = 'Z-Library';
+        color = '#3273dc';
+    } else if (key === 'anna') {
+        label = "Anna's Archive";
+        color = '#00d1b2';
+    } else {
+        label = 'Project Gutenberg';
+        color = '#ffdd57';
+    }
+
+    return {
+        key,
+        label,
+        settingKey: `${key}Enabled` as keyof GoodlibSettings,
+        icon: SOURCE_META[key].glyph,
+        color,
+        textColor: key === 'gutenberg' ? '#333' : '#fff',
+    };
+});
 
 export function GoodreadsScreen({ onBack }: GoodreadsScreenProps) {
     const [settings, setSettings] = useState<GoodlibSettings>(DEFAULT_GOODLIB_SETTINGS);

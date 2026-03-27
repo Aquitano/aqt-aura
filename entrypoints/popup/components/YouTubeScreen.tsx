@@ -1,5 +1,5 @@
 import { YoutubeElement } from '@/utils/youtube';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CollapsibleSection } from './CollapsibleSection';
 
 interface YouTubeScreenProps {
@@ -15,10 +15,14 @@ const CATEGORY_ORDER = ['Home', 'Shorts', 'Video Player', 'Header', 'Sidebar', '
 export function YouTubeScreen({ onBack, elements, onToggleItem, playbackSpeed, onSpeedChange }: YouTubeScreenProps) {
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
-    const grouped = CATEGORY_ORDER.map((cat) => ({
-        title: cat,
-        items: elements.filter((e) => (e.category || 'Other') === cat),
-    })).filter((g) => g.items.length > 0);
+    const grouped = useMemo(
+        () =>
+            CATEGORY_ORDER.map((cat) => ({
+                title: cat,
+                items: elements.filter((e) => (e.category || 'Other') === cat),
+            })).filter((g) => g.items.length > 0),
+        [elements]
+    );
 
     const toggleSection = (title: string) => {
         setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }));

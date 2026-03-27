@@ -1,13 +1,12 @@
 import { BlockOverlay } from '@/components/BlockOverlay';
 import ReactDOM from 'react-dom/client';
-import { ContentScriptContext } from 'wxt/client';
 
 export default defineContentScript({
     matches: ['*://*/*'],
     cssInjectionMode: 'ui',
 
     async main(ctx) {
-        let ui: any = null;
+        let ui: Awaited<ReturnType<typeof createShadowRootUi>> | null = null;
 
         const mountOverlay = async () => {
             if (ui) return;

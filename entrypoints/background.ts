@@ -8,6 +8,7 @@ import {
     type DailyUsage,
     type TimeLimit,
 } from '@/utils/time-limits';
+import { getStorageValue, isDailyUsage, isTimeLimitArray } from '@/utils/storage-helpers';
 
 const TRACKING_INTERVAL_MS = 30000;
 const SAVE_INTERVAL_MS = 60000;
@@ -35,9 +36,9 @@ export default defineBackground(() => {
     const loadState = async (): Promise<void> => {
         const stored = await browser.storage.local.get([TIME_LIMITS_KEY, DAILY_USAGE_KEY, LAST_RESET_DATE_KEY]);
 
-        state.timeLimits = (stored[TIME_LIMITS_KEY] as TimeLimit[] | undefined) ?? [];
-        state.dailyUsage = (stored[DAILY_USAGE_KEY] as DailyUsage | undefined) ?? {};
-        state.lastResetDate = (stored[LAST_RESET_DATE_KEY] as string | undefined) ?? getTodayDateString();
+        state.timeLimits = getStorageValue(stored, TIME_LIMITS_KEY, [], isTimeLimitArray);
+        state.dailyUsage = getStorageValue(stored, DAILY_USAGE_KEY, {}, isDailyUsage);
+        state.lastResetDate = getStorageValue(stored, LAST_RESET_DATE_KEY, getTodayDateString());
     };
 
     const checkDateReset = async (): Promise<void> => {
@@ -165,10 +166,12 @@ export default defineBackground(() => {
 
     browser.storage.local.onChanged.addListener((changes) => {
         if (changes[TIME_LIMITS_KEY]) {
-            state.timeLimits = (changes[TIME_LIMITS_KEY].newValue as TimeLimit[] | undefined) ?? [];
+            const newValue = changes[TIME_LIMITS_KEY].newValue;
+            state.timeLimits = isTimeLimitArray(newValue) ? newValue : [];
         }
         if (changes[DAILY_USAGE_KEY] && !state.savePending) {
-            state.dailyUsage = (changes[DAILY_USAGE_KEY].newValue as DailyUsage | undefined) ?? {};
+            const newValue = changes[DAILY_USAGE_KEY].newValue;
+            state.dailyUsage = isDailyUsage(newValue) ? newValue : {};
         }
     });
 

@@ -39,7 +39,6 @@ export default defineContentScript({
         let lastUrl = window.location.href;
         let pendingUpdate: number | null = null;
         let observer: MutationObserver | null = null;
-        let urlCheckInterval: ReturnType<typeof setInterval> | null = null;
         let cachedTitleElement: WeakRef<HTMLElement> | null = null;
         let cachedSearchQuery: string | null = null;
 
@@ -300,21 +299,20 @@ export default defineContentScript({
                 observer.disconnect();
                 observer = null;
             }
-            if (urlCheckInterval) {
-                clearInterval(urlCheckInterval);
-                urlCheckInterval = null;
-            }
             if (pendingUpdate !== null) {
                 cancelIdleCallback(pendingUpdate);
                 pendingUpdate = null;
             }
+            window.removeEventListener('popstate', handleUrlChange);
+            window.removeEventListener('hashchange', handleUrlChange);
             browser.storage.onChanged.removeListener(handleStorageChange);
         }
 
         loadSettings();
         setupObserver();
         browser.storage.onChanged.addListener(handleStorageChange);
-        urlCheckInterval = setInterval(handleUrlChange, 500);
+        window.addEventListener('popstate', handleUrlChange);
+        window.addEventListener('hashchange', handleUrlChange);
         window.addEventListener('pagehide', cleanup, { once: true });
     },
 });

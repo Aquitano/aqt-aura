@@ -12,6 +12,7 @@ export class PlaybackManager {
     private intervalId: ReturnType<typeof setInterval> | undefined;
     private observer: MutationObserver | null = null;
     private isInitialized = false;
+    private videoCheckTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
         this.setupVideoObserver();
@@ -59,6 +60,12 @@ export class PlaybackManager {
             clearInterval(this.intervalId);
             this.intervalId = undefined;
         }
+
+        if (this.videoCheckTimeout) {
+            clearTimeout(this.videoCheckTimeout);
+            this.videoCheckTimeout = null;
+        }
+
         this.observer?.disconnect();
         this.observer = null;
         this.isInitialized = false;
@@ -112,12 +119,19 @@ export class PlaybackManager {
             for (const mutation of mutations) {
                 if (mutation.addedNodes.length === 0) continue;
 
-                const video = this.getVideoElement();
-                if (video) {
-                    this.attachVideoListeners(video);
-                    this.applySpeed();
-                    break;
+                if (this.videoCheckTimeout) {
+                    clearTimeout(this.videoCheckTimeout);
                 }
+
+                this.videoCheckTimeout = setTimeout(() => {
+                    const video = this.getVideoElement();
+                    if (video) {
+                        this.attachVideoListeners(video);
+                        this.applySpeed();
+                    }
+                    this.videoCheckTimeout = null;
+                }, 100);
+                break;
             }
         });
 

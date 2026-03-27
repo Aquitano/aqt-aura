@@ -48,6 +48,7 @@ export class OverlayManager {
     private menuTimeout: ReturnType<typeof setTimeout> | undefined;
     private controlsObserver: MutationObserver | null = null;
     private bodyObserver: MutationObserver | null = null;
+    private navigationListener: (() => void) | null = null;
 
     constructor(playbackManager: PlaybackManager) {
         this.playbackManager = playbackManager;
@@ -65,6 +66,11 @@ export class OverlayManager {
         this.bodyObserver?.disconnect();
         this.container?.remove();
         document.getElementById(SLIDER_CSS_ID)?.remove();
+
+        if (this.navigationListener) {
+            document.removeEventListener('yt-navigate-finish', this.navigationListener);
+            this.navigationListener = null;
+        }
     }
 
     private injectSliderStyles(): void {
@@ -91,13 +97,15 @@ export class OverlayManager {
             attachVideoListener(video);
         }
 
-        document.addEventListener('yt-navigate-finish', () => {
+        this.navigationListener = () => {
             const newVideo = safeQuerySelector<HTMLVideoElement>('video');
             if (newVideo) {
                 attachVideoListener(newVideo);
             }
             this.injectOverlay();
-        });
+        };
+
+        document.addEventListener('yt-navigate-finish', this.navigationListener);
     }
 
     private injectOverlay(): void {
