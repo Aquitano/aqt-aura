@@ -77,14 +77,7 @@ export default defineContentScript({
         }
 
         function getCleanBookTitle(titleEl: HTMLElement): string {
-            const wrapper = titleEl.querySelector(`[${CHIPS_WRAP_ATTR}]`);
-            if (!wrapper) {
-                return normalizeText(titleEl.textContent ?? '');
-            }
-
-            const clone = titleEl.cloneNode(true) as HTMLElement;
-            clone.querySelector(`[${CHIPS_WRAP_ATTR}]`)?.remove();
-            return normalizeText(clone.textContent ?? '');
+            return normalizeText(titleEl.textContent ?? '');
         }
 
         function getPrimaryAuthor(): string {
@@ -173,11 +166,11 @@ export default defineContentScript({
             const author = getPrimaryAuthor();
             const searchQuery = buildSearchQuery(bookTitle, author);
 
-            let wrapper = titleEl.querySelector(`[${CHIPS_WRAP_ATTR}]`);
+            let wrapper = document.querySelector(`[${CHIPS_WRAP_ATTR}]`);
             const wrapperExists = !!wrapper;
 
             if (!wrapper) {
-                wrapper = document.createElement('span');
+                wrapper = document.createElement('div');
                 wrapper.setAttribute(CHIPS_WRAP_ATTR, 'true');
                 wrapper.className = 'goodlib-chip-wrap';
             }
@@ -202,7 +195,7 @@ export default defineContentScript({
             cachedSearchQuery = searchQuery;
 
             if (!wrapperExists) {
-                titleEl.appendChild(wrapper);
+                titleEl.after(wrapper);
             }
         }
 
