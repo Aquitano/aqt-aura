@@ -22,16 +22,16 @@ export type PageType = (typeof PAGE_TYPES)[keyof typeof PAGE_TYPES];
 export interface YoutubeElement {
     id: string;
     selector: string;
-    checked: boolean; // default state
+    checked: boolean;
     property?: string;
     style?: string;
     pageTypes: PageType[];
-    label?: string; // Human readable label
-    category?: string; // To group them in the UI
+    label?: string;
+    category?: string;
 }
 
 export const DEFAULT_ELEMENTS: YoutubeElement[] = [
-    // --- Header ---
+    // Header
     {
         id: 'logo',
         selector: '//ytd-topbar-logo-renderer',
@@ -83,7 +83,7 @@ export const DEFAULT_ELEMENTS: YoutubeElement[] = [
         category: 'Header',
     },
 
-    // --- Home ---
+    // Home
     {
         id: 'scheduled-videos',
         selector: "//ytd-rich-item-renderer[.//ytd-thumbnail-overlay-time-status-renderer[@overlay-style='UPCOMING']]",
@@ -137,7 +137,7 @@ export const DEFAULT_ELEMENTS: YoutubeElement[] = [
     {
         id: 'home-news',
         selector:
-            "//ytd-rich-section-renderer[not(.//ytm-shorts-lockup-view-model) and not(.//div[contains(@class, 'button-container') and not(@hidden)][.//*[local-name() = 'svg']//*[local-name() = 'path' and @d='m18 9.28-6.35 6.35-6.37-6.35.72-.71 5.64 5.65 5.65-5.65z']])] | //ytd-rich-section-renderer[.//a[@href='/feed/news_destination']]", // Updated with clearer news selector if possible, keeping user's complex one
+            "//ytd-rich-section-renderer[not(.//ytm-shorts-lockup-view-model) and not(.//div[contains(@class, 'button-container') and not(@hidden)][.//*[local-name() = 'svg']//*[local-name() = 'path' and @d='m18 9.28-6.35 6.35-6.37-6.35.72-.71 5.64 5.65 5.65-5.65z']])] | //ytd-rich-section-renderer[.//a[@href='/feed/news_destination']]",
         checked: false,
         property: DISPLAY,
         style: DISPLAY_NONE,
@@ -239,7 +239,7 @@ export const DEFAULT_ELEMENTS: YoutubeElement[] = [
         category: 'Home',
     },
 
-    // --- Sidebar ---
+    // Sidebar
     {
         id: 'sidebar',
         selector: "//tp-yt-app-drawer | //ytd-mini-guide-renderer | //yt-icon-button[@id='guide-button']",
@@ -272,7 +272,7 @@ export const DEFAULT_ELEMENTS: YoutubeElement[] = [
         category: 'Sidebar',
     },
 
-    // --- Shorts ---
+    // Shorts
     {
         id: 'redirect-shorts',
         selector: 'body',
@@ -486,7 +486,7 @@ export const DEFAULT_ELEMENTS: YoutubeElement[] = [
         category: 'Sidebar',
     },
 
-    // --- General / Global ---
+    // General
     {
         id: 'ads',
         selector:
@@ -559,7 +559,7 @@ export const DEFAULT_ELEMENTS: YoutubeElement[] = [
         category: 'General',
     },
 
-    // --- Video Player ---
+    // Video Player
     {
         id: 'video-title',
         selector: "//div[@id='above-the-fold']/div[@id='title']",
@@ -920,13 +920,13 @@ export const DEFAULT_ELEMENTS: YoutubeElement[] = [
         selector: "//div[contains(@class,'ytp-play-progress')]",
         checked: false,
         property: BACKGROUND,
-        style: '#F03', // Custom color
+        style: '#F03',
         pageTypes: [PAGE_TYPES.VIDEO],
         label: 'Neon Red Progress Bar',
         category: 'Video Player',
     },
 
-    // --- Other Pages ---
+    // Other Pages
     {
         id: 'subscriptions-shorts',
         selector: '//ytd-rich-shelf-renderer/../.. | //ytd-rich-shelf-renderer',
@@ -977,7 +977,6 @@ export const DEFAULT_ELEMENTS: YoutubeElement[] = [
     },
 ];
 
-// Helper to categorize for UI
 export const getCategorizedElements = () => {
     const categories: Record<string, YoutubeElement[]> = {};
     DEFAULT_ELEMENTS.forEach((el) => {

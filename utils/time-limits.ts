@@ -13,7 +13,7 @@ export const DAILY_USAGE_KEY = 'local:daily_usage';
 export const LAST_RESET_DATE_KEY = 'local:last_reset_date';
 
 /**
- * Normalizes a domain string for reliable matching.
+ * Normalizes a domain for matching (strips www., lowercases).
  */
 export function normalizeDomain(domain: string): string {
     return domain
@@ -23,7 +23,7 @@ export function normalizeDomain(domain: string): string {
 }
 
 /**
- * Checks whether a visited hostname matches a configured domain.
+ * Checks if visitedDomain matches or is a subdomain of limitDomain.
  */
 export function matchesDomain(visitedDomain: string, limitDomain: string): boolean {
     const normalizedVisited = normalizeDomain(visitedDomain);

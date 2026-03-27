@@ -25,9 +25,6 @@ export default defineContentScript({
     },
 });
 
-/**
- * Sets up listeners for storage changes to react to settings updates.
- */
 function setupStorageListeners(elementManager: ElementManager, playbackManager: PlaybackManager): void {
     browser.storage.local.onChanged.addListener((changes) => {
         try {
@@ -58,9 +55,6 @@ function setupNavigationListeners(elementManager: ElementManager, playbackManage
         }
     };
 
-    // Browser back/forward navigation
     globalThis.addEventListener('popstate', handleNavigation);
-
-    // YouTube's custom navigation event
     globalThis.addEventListener('yt-navigate-finish', handleNavigation);
 }

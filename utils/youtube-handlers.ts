@@ -42,10 +42,7 @@ const handleVideoThumbnail: CustomHandler = ({ active }) => {
     if (active && !existingThumb) {
         const items = safeQuerySelector(SELECTORS.secondaryResults);
         const videoId = getVideoIdFromUrl();
-
-        if (!items || !videoId) {
-            return;
-        }
+        if (!items || !videoId) return;
 
         try {
             const thumbnailSource = `https://img.youtube.com/vi/${encodeURIComponent(videoId)}/mqdefault.jpg`;
@@ -71,7 +68,7 @@ const handleVideoThumbnail: CustomHandler = ({ active }) => {
             ytImage.appendChild(anchorTag);
             items.prepend(ytImage);
         } catch {
-            // Silently fail if DOM manipulation fails
+            // Ignore
         }
     } else if (!active && existingThumb) {
         existingThumb.closest('ytd-thumbnail')?.remove();
@@ -83,7 +80,7 @@ const handleDisabledProp: CustomHandler = ({ nodes, active }) => {
         try {
             (node as unknown as { disabled: boolean }).disabled = active;
         } catch {
-            // Some elements may not support the disabled property
+            // Ignore
         }
     }
 };
@@ -118,7 +115,7 @@ const handleChannelTrailer: CustomHandler = ({ nodes, active }) => {
             try {
                 video.pause();
             } catch {
-                // Video might be in a state where pause fails
+                // Ignore
             }
         }
     }
@@ -138,7 +135,7 @@ const handleRedirectShorts: CustomHandler = ({ active }) => {
             globalThis.location.replace(`/watch?v=${encodeURIComponent(videoId)}`);
         }
     } catch {
-        // Location access or redirect might fail in some contexts
+        // Ignore
     }
 };
 

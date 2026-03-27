@@ -5,7 +5,6 @@ import { SPECIAL_HANDLERS } from './youtube-handlers';
 
 const OBSERVER_DEBOUNCE_MS = 50;
 
-/** Default CSS property and value for hiding elements */
 const DEFAULT_PROPERTY = 'display';
 const DEFAULT_STYLE = 'none';
 
@@ -78,10 +77,8 @@ export class ElementManager {
             const pageTypes = element.pageTypes;
 
             if (!pageTypes || pageTypes.length === 0) {
-                // Global elements apply to all pages
                 this.addToPageTypeLookup('global', element);
             } else {
-                // Page-specific elements
                 for (const pageType of pageTypes) {
                     this.addToPageTypeLookup(pageType, element);
                 }
@@ -148,22 +145,20 @@ export class ElementManager {
             const currentStyle = this.appliedStyles.get(node);
 
             if (shouldBeActive) {
-                // Only apply if not already applied with same style
                 if (currentStyle !== styleKey) {
                     try {
                         node.style.setProperty(property, value, 'important');
                         this.appliedStyles.set(node, styleKey);
                     } catch {
-                        // Style application might fail for some edge cases
+                        // Ignore
                     }
                 }
             } else if (currentStyle) {
-                // Only remove if we previously applied a style
                 try {
                     node.style.removeProperty(property);
                     this.appliedStyles.delete(node);
                 } catch {
-                    // Style removal might fail for some edge cases
+                    // Ignore
                 }
             }
         }

@@ -18,24 +18,18 @@ export class PlaybackManager {
     }
 
     async initialize(): Promise<void> {
-        if (this.isInitialized) {
-            return;
-        }
+        if (this.isInitialized) return;
 
         try {
-            // Load saved speed, but only apply it automatically on non-music videos
             const storage = await browser.storage.local.get(PLAYBACK_SPEED_KEY);
             const storedSpeed: unknown = storage[PLAYBACK_SPEED_KEY];
             this.currentSpeed = this.validateSpeed(storedSpeed);
 
-            const isMusic = this.isMusicVideo();
-            if (!isMusic) {
+            if (!this.isMusicVideo()) {
                 this.applySpeed();
             }
 
-            // Start enforcement so manual changes work (applySpeed itself skips music videos)
             this.startEnforcement();
-
             this.isInitialized = true;
         } catch (error) {
             console.error('[AQT] Failed to initialize PlaybackManager:', error);
@@ -90,20 +84,13 @@ export class PlaybackManager {
 
     private applySpeed(): void {
         const video = this.getVideoElement();
-        if (!video) {
-            return;
-        }
-
-        const isMusic = this.isMusicVideo();
-        if (isMusic) {
-            return; // Skip enforcement on YouTube Music videos
-        }
+        if (!video || this.isMusicVideo()) return;
 
         if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
             try {
                 video.playbackRate = this.currentSpeed;
             } catch {
-                // Some videos may not support speed changes
+                // Ignore
             }
         }
     }
@@ -114,20 +101,16 @@ export class PlaybackManager {
         }
 
         this.intervalId = setInterval(() => {
-            const isMusic = this.isMusicVideo();
-            if (isMusic) {
-                return; // Skip enforcement for music videos
+            if (!this.isMusicVideo()) {
+                this.applySpeed();
             }
-            this.applySpeed();
         }, ENFORCEMENT_INTERVAL_MS);
     }
 
     private setupVideoObserver(): void {
         this.observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
-                if (mutation.addedNodes.length === 0) {
-                    continue;
-                }
+                if (mutation.addedNodes.length === 0) continue;
 
                 const video = this.getVideoElement();
                 if (video) {
@@ -138,7 +121,6 @@ export class PlaybackManager {
             }
         });
 
-        // Start observing once body is available
         if (document.body) {
             this.observer.observe(document.body, {
                 childList: true,
@@ -146,7 +128,6 @@ export class PlaybackManager {
             });
         }
 
-        // Try initial attach for already-loaded videos
         const video = this.getVideoElement();
         if (video) {
             this.attachVideoListeners(video);
@@ -154,18 +135,12 @@ export class PlaybackManager {
     }
 
     private attachVideoListeners(video: HTMLVideoElement): void {
-        // Prevent duplicate listener attachment
-        if (video.hasAttribute(ATTACHED_MARKER)) {
-            return;
-        }
+        if (video.hasAttribute(ATTACHED_MARKER)) return;
         video.setAttribute(ATTACHED_MARKER, 'true');
 
         video.addEventListener('ratechange', () => {
-            const isMusic = this.isMusicVideo();
-            if (isMusic) {
-                return; // Skip enforcement for music videos
-            }
-            // Re-enforce speed if YouTube tried to change it
+            if (this.isMusicVideo()) return;
+
             if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
                 this.applySpeed();
             }

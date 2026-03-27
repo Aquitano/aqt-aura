@@ -36,8 +36,7 @@ export function selectByXPath(selector: string, context: Node = document): HTMLE
             }
         }
     } catch {
-        // XPath errors are expected for invalid selectors or compatibility issues.
-        // We fail silently to avoid console spam in production.
+        // XPath errors are expected for invalid selectors
     }
 
     return results;
@@ -54,7 +53,6 @@ export function safeQuerySelector<T extends HTMLElement = HTMLElement>(
     }
 }
 
-/** URL pattern matchers for YouTube page types */
 const PAGE_TYPE_MATCHERS: ReadonlyArray<{ pattern: (url: string) => boolean; type: PageType }> = [
     {
         pattern: (url) => url === 'https://www.youtube.com/' || url.startsWith('https://www.youtube.com/?'),
@@ -78,7 +76,7 @@ export function getCurrentPageType(): PageType | null {
             }
         }
     } catch {
-        // Handle edge cases where location might not be accessible
+        // Ignore - location may not be accessible
     }
 
     return null;

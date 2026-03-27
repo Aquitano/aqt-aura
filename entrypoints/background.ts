@@ -70,32 +70,20 @@ export default defineBackground(() => {
         browser.tabs.sendMessage(tabId, { type: messageType }).catch(() => {});
     };
 
-    /**
-     * Keeps time accounting accurate even when timers drift.
-     */
     const getElapsedMinutes = (now: number, lastTrackedAt: number | null): number => {
         if (lastTrackedAt === null) return 0;
         return Math.max(0, (now - lastTrackedAt) / MS_PER_MINUTE);
     };
 
-    /**
-     * Accumulates elapsed time once per tick to reduce work.
-     */
     const applyElapsedUsage = (domain: string | null, elapsedMinutes: number): void => {
         if (!domain || elapsedMinutes <= 0) return;
         state.dailyUsage[domain] = (state.dailyUsage[domain] ?? 0) + elapsedMinutes;
         state.savePending = true;
     };
 
-    /**
-     * Centralizes domain matching so it stays consistent.
-     */
     const findLimitConfig = (domain: string): TimeLimit | null =>
         state.timeLimits.find((limit) => matchesDomain(domain, limit.domain)) ?? null;
 
-    /**
-     * Stores usage under the configured domain for stable reporting.
-     */
     const ensureUsageKey = (domain: string, usageKey: string): void => {
         if (usageKey === domain || state.dailyUsage[domain] === undefined) return;
 
@@ -104,9 +92,6 @@ export default defineBackground(() => {
         state.savePending = true;
     };
 
-    /**
-     * Tracks the cursor needed to compute the next delta.
-     */
     const setTrackingCursor = (now: number, domain: string | null): void => {
         state.lastTrackedAt = now;
         state.lastTrackedDomain = domain;
