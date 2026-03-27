@@ -1,5 +1,5 @@
 interface HomeScreenProps {
-    readonly onNavigate: (screen: 'youtube' | 'timelimits') => void;
+    readonly onNavigate: (screen: 'youtube' | 'timelimits' | 'goodreads') => void;
 }
 
 export function HomeScreen({ onNavigate }: HomeScreenProps) {
@@ -28,6 +28,19 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                 <div className="nav-card-info">
                     <h3>Time Limits</h3>
                     <p>Set daily usage limits</p>
+                </div>
+                <div className="nav-arrow">→</div>
+            </button>
+
+            <button className="nav-card" onClick={() => onNavigate('goodreads')} type="button">
+                <div className="nav-card-icon generic-icon" style={{ background: 'rgba(0, 209, 178, 0.1)', color: '#00d1b2' }}>
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M6 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6zm5 2h2v7h-2V6zm0 8h2v2h-2v-2z" />
+                    </svg>
+                </div>
+                <div className="nav-card-info">
+                    <h3>Book Search</h3>
+                    <p>Quick links on Goodreads & more</p>
                 </div>
                 <div className="nav-arrow">→</div>
             </button>

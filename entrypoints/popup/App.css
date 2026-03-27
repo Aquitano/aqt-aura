@@ -442,3 +442,71 @@ input:checked + .slider:before {
     color: var(--text-primary);
     border-color: #555;
 }
+
+/* --- GoodreadsScreen Styles --- */
+.goodreads-description {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0 24px 20px;
+    padding: 0;
+}
+
+.source-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.source-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.domain-settings {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.domain-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.domain-input-group label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.domain-input {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: 'Roboto Mono', monospace;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.domain-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(88, 101, 242, 0.05);
+}
+
+.domain-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}

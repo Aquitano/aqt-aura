@@ -1,0 +1,125 @@
+/* GoodLib chip styles */
+
+.goodlib-chip-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    vertical-align: middle;
+}
+
+.goodlib-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px 0 6px;
+    border-radius: 13px;
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    vertical-align: middle;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Dark theme default */
+    background: rgba(30, 30, 30, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+
+    /* GPU-accelerated transitions */
+    transition:
+        transform 0.15s ease-out,
+        box-shadow 0.15s ease-out,
+        background-color 0.15s ease-out,
+        border-color 0.15s ease-out;
+    will-change: transform;
+}
+
+.goodlib-chip:hover {
+    background: rgba(50, 50, 50, 0.95);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    transform: translateY(-1px) scale(1.02);
+}
+
+.goodlib-chip:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* Light theme variant */
+.goodlib-chip[data-site='light'] {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #333;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.goodlib-chip[data-site='light']:hover {
+    background: #fff;
+    border-color: rgba(0, 0, 0, 0.18);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.goodlib-chip[data-site='light'] .goodlib-chip-label {
+    color: #333;
+}
+
+/* Icon container */
+.goodlib-chip-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 6px;
+    font-size: 9px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+/* Source-specific icon colors */
+.goodlib-chip--zlib .goodlib-chip-icon {
+    background: #3273dc;
+}
+
+.goodlib-chip--anna .goodlib-chip-icon {
+    background: #00d1b2;
+}
+
+.goodlib-chip--gutenberg .goodlib-chip-icon {
+    background: #ffdd57;
+    color: #333;
+}
+
+/* Glyph styling */
+.goodlib-chip-glyph {
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    transition: transform 0.15s ease-out;
+}
+
+.goodlib-chip-glyph--wide {
+    font-size: 7px;
+}
+
+.goodlib-chip:hover .goodlib-chip-glyph {
+    transform: rotate(8deg);
+}
+
+/* Label */
+.goodlib-chip-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: -0.2px;
+}

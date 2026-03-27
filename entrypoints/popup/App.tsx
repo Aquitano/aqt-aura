@@ -3,12 +3,12 @@ import { mergeWithDefaults } from '@/utils/storage';
 import { DEFAULT_ELEMENTS, STORAGE_KEY, YoutubeElement } from '@/utils/youtube';
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
+import { GoodreadsScreen } from './components/GoodreadsScreen';
 import { HomeScreen } from './components/HomeScreen';
+import { TimeLimitScreen } from './components/TimeLimitScreen';
 import { YouTubeScreen } from './components/YouTubeScreen';
 
-import { TimeLimitScreen } from './components/TimeLimitScreen';
-
-type Screen = 'home' | 'youtube' | 'timelimits';
+type Screen = 'home' | 'youtube' | 'timelimits' | 'goodreads';
 
 export default function App() {
     const [screen, setScreen] = useState<Screen>('home');
@@ -76,6 +76,9 @@ export default function App() {
                 )}
                 {screen === 'timelimits' && (
                     <TimeLimitScreen onBack={() => setScreen('home')} />
+                )}
+                {screen === 'goodreads' && (
+                    <GoodreadsScreen onBack={() => setScreen('home')} />
                 )}
             </main>
         </div>
