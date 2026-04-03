@@ -39,7 +39,10 @@ export function YouTubeScreen({ onBack, elements, onToggleItem, playbackSpeed, o
         <div className="screen-content fade-in">
             <div className="sub-header">
                 <button className="back-btn" onClick={onBack} type="button">
-                    ← Back
+                    <span aria-hidden="true" className="back-btn-icon">
+                        ←
+                    </span>
+                    <span>Back</span>
                 </button>
                 <h2>YouTube Settings</h2>
             </div>

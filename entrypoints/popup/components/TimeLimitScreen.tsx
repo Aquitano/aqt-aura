@@ -61,15 +61,22 @@ export function TimeLimitScreen({ onBack }: TimeLimitScreenProps) {
     };
 
     return (
-        <div className="screen">
-            <header className="screen-header">
-                <button onClick={onBack} className="back-button">
-                    ←
+        <div className="screen-content fade-in">
+            <div className="sub-header">
+                <button onClick={onBack} className="back-btn" type="button">
+                    <span aria-hidden="true" className="back-btn-icon">
+                        ←
+                    </span>
+                    <span>Back</span>
                 </button>
                 <h2>Time Limits</h2>
-            </header>
+            </div>
 
-            <div className="content">
+            <p className="section-description">
+                Set daily caps for distracting sites and track how much of the budget is already gone.
+            </p>
+
+            <div className="time-limit-shell">
                 <form onSubmit={handleAdd} className="add-limit-form">
                     <input
                         type="text"
@@ -78,17 +85,18 @@ export function TimeLimitScreen({ onBack }: TimeLimitScreenProps) {
                         onChange={(e) => setNewDomain(e.target.value)}
                         className="input-field"
                     />
-                    <input
-                        type="number"
-                        placeholder="Limit (mins)"
-                        value={newLimit}
-                        onChange={(e) => setNewLimit(e.target.value)}
-                        className="input-field"
-                        style={{ width: '80px' }}
-                    />
-                    <button type="submit" className="action-button primary">
-                        Add
-                    </button>
+                    <div className="limit-form-row">
+                        <input
+                            type="number"
+                            placeholder="Limit (mins)"
+                            value={newLimit}
+                            onChange={(e) => setNewLimit(e.target.value)}
+                            className="input-field input-field-compact"
+                        />
+                        <button type="submit" className="action-button primary">
+                            Add Limit
+                        </button>
+                    </div>
                 </form>
 
                 <div className="limits-list">
@@ -113,7 +121,7 @@ export function TimeLimitScreen({ onBack }: TimeLimitScreenProps) {
                                         {Math.floor(used)} / {l.minutes} mins
                                     </div>
                                 </div>
-                                <button onClick={() => handleDelete(l.id)} className="delete-button">
+                                <button onClick={() => handleDelete(l.id)} className="delete-button" type="button">
                                     ×
                                 </button>
                             </div>
@@ -122,94 +130,6 @@ export function TimeLimitScreen({ onBack }: TimeLimitScreenProps) {
                     {limits.length === 0 && <div className="empty-state">No limits set.</div>}
                 </div>
             </div>
-
-            <style>{`
-                .screen-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                    margin-bottom: 20px;
-                    padding-bottom: 10px;
-                    border-bottom: 1px solid rgba(255,255,255,0.1);
-                }
-                .back-button {
-                    background: none;
-                    border: none;
-                    color: white;
-                    font-size: 20px;
-                    cursor: pointer;
-                    padding: 5px;
-                }
-                .add-limit-form {
-                    display: flex;
-                    gap: 10px;
-                    margin-bottom: 20px;
-                }
-                .input-field {
-                    background: rgba(255,255,255,0.1);
-                    border: 1px solid rgba(255,255,255,0.2);
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    color: white;
-                    flex: 1;
-                }
-                .action-button.primary {
-                    background: #4A90E2;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 8px 16px;
-                    cursor: pointer;
-                    font-weight: 500;
-                }
-                .limit-item {
-                    background: rgba(255,255,255,0.05);
-                    border-radius: 8px;
-                    padding: 12px;
-                    margin-bottom: 10px;
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                }
-                .limit-info {
-                    flex: 1;
-                }
-                .limit-domain {
-                    font-weight: 500;
-                    margin-bottom: 4px;
-                }
-                .limit-progress-bar {
-                    height: 4px;
-                    background: rgba(255,255,255,0.1);
-                    border-radius: 2px;
-                    margin-bottom: 4px;
-                    overflow: hidden;
-                }
-                .limit-progress-fill {
-                    height: 100%;
-                    transition: width 0.3s ease;
-                }
-                .limit-stats {
-                    font-size: 11px;
-                    color: #aaa;
-                }
-                .delete-button {
-                    background: none;
-                    border: none;
-                    color: #666;
-                    font-size: 20px;
-                    cursor: pointer;
-                    padding: 5px;
-                }
-                .delete-button:hover {
-                    color: #ff4444;
-                }
-                .empty-state {
-                    text-align: center;
-                    color: #666;
-                    margin-top: 30px;
-                }
-            `}</style>
         </div>
     );
 }

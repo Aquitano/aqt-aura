@@ -116,7 +116,10 @@ export function GoodreadsScreen({ onBack }: GoodreadsScreenProps) {
             <div className="screen-content">
                 <div className="sub-header">
                     <button className="back-btn" onClick={onBack} type="button">
-                        ← Back
+                        <span aria-hidden="true" className="back-btn-icon">
+                            ←
+                        </span>
+                        <span>Back</span>
                     </button>
                     <h2>Book Search</h2>
                 </div>
@@ -129,7 +132,10 @@ export function GoodreadsScreen({ onBack }: GoodreadsScreenProps) {
         <div className="screen-content fade-in">
             <div className="sub-header">
                 <button className="back-btn" onClick={onBack} type="button">
-                    ← Back
+                    <span aria-hidden="true" className="back-btn-icon">
+                        ←
+                    </span>
+                    <span>Back</span>
                 </button>
                 <h2>Book Search</h2>
             </div>
