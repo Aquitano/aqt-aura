@@ -1,4 +1,4 @@
-import { PLAYBACK_SPEED_KEY } from '@/utils/playback';
+import { DEFAULT_PLAYBACK_SPEED, normalizePlaybackSpeed, PLAYBACK_SPEED_KEY } from '@/utils/playback';
 import { mergeWithDefaults } from '@/utils/storage';
 import { DEFAULT_ELEMENTS, STORAGE_KEY, YoutubeElement } from '@/utils/youtube';
 import { useEffect, useRef, useState } from 'react';
@@ -13,7 +13,7 @@ type Screen = 'home' | 'youtube' | 'timelimits' | 'goodreads';
 export default function App() {
     const [screen, setScreen] = useState<Screen>('home');
     const [elements, setElements] = useState<YoutubeElement[]>(DEFAULT_ELEMENTS);
-    const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+    const [playbackSpeed, setPlaybackSpeed] = useState<number>(DEFAULT_PLAYBACK_SPEED);
     const [loading, setLoading] = useState(true);
     const hasLoadedRef = useRef(false);
 
@@ -25,7 +25,7 @@ export default function App() {
                 setElements(merged);
 
                 const storedSpeed = await browser.storage.local.get(PLAYBACK_SPEED_KEY);
-                setPlaybackSpeed((storedSpeed?.[PLAYBACK_SPEED_KEY] as number) || 1);
+                setPlaybackSpeed(normalizePlaybackSpeed(storedSpeed?.[PLAYBACK_SPEED_KEY]));
             } catch (e) {
                 console.error('Failed to load settings', e);
             } finally {

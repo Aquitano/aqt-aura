@@ -1,18 +1,37 @@
 export const PLAYBACK_SPEED_KEY = 'youtube_playback_speed';
+export const MIN_PLAYBACK_SPEED = 0.25;
+export const MAX_PLAYBACK_SPEED = 5;
+export const PLAYBACK_SPEED_STEP = 0.25;
+export const DEFAULT_PLAYBACK_SPEED = 1;
 
 const ENFORCEMENT_INTERVAL_MS = 1000;
 const SPEED_TOLERANCE = 0.05;
-const MIN_SPEED = 0.25;
-const MAX_SPEED = 16;
-const DEFAULT_SPEED = 1;
 const ATTACHED_MARKER = 'data-aqt-speed-attached';
 
+export function normalizePlaybackSpeed(value: unknown): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return DEFAULT_PLAYBACK_SPEED;
+    }
+
+    return Math.max(
+        MIN_PLAYBACK_SPEED,
+        Math.min(MAX_PLAYBACK_SPEED, Math.round(value * 100) / 100),
+    );
+}
+
+export function formatPlaybackSpeed(value: number): string {
+    const normalized = normalizePlaybackSpeed(value);
+    return `${Number.isInteger(normalized) ? normalized.toFixed(0) : normalized.toString()}x`;
+}
+
 export class PlaybackManager {
-    private currentSpeed = DEFAULT_SPEED;
+    private currentSpeed = DEFAULT_PLAYBACK_SPEED;
     private intervalId: ReturnType<typeof setInterval> | undefined;
     private observer: MutationObserver | null = null;
     private isInitialized = false;
     private videoCheckTimeout: ReturnType<typeof setTimeout> | null = null;
+    private manualMusicOverride = false;
+    private lastNavigationUrl = '';
 
     constructor() {
         this.setupVideoObserver();
@@ -24,9 +43,10 @@ export class PlaybackManager {
         try {
             const storage = await browser.storage.local.get(PLAYBACK_SPEED_KEY);
             const storedSpeed: unknown = storage[PLAYBACK_SPEED_KEY];
-            this.currentSpeed = this.validateSpeed(storedSpeed);
+            this.currentSpeed = normalizePlaybackSpeed(storedSpeed);
+            this.lastNavigationUrl = this.getNavigationUrl();
 
-            if (!this.isMusicVideo()) {
+            if (this.shouldEnforcePlayback()) {
                 this.applySpeed();
             }
 
@@ -38,9 +58,10 @@ export class PlaybackManager {
     }
 
     setSpeed(speed: number): void {
-        const validatedSpeed = this.validateSpeed(speed);
+        const validatedSpeed = normalizePlaybackSpeed(speed);
         this.currentSpeed = validatedSpeed;
-        this.applySpeed();
+        this.manualMusicOverride = this.isMusicVideo();
+        this.applySpeed({ force: true });
     }
 
     getSpeed(): number {
@@ -48,6 +69,8 @@ export class PlaybackManager {
     }
 
     reapply(): void {
+        this.resetManualMusicOverrideIfNavigated();
+
         const video = this.getVideoElement();
         if (video) {
             this.attachVideoListeners(video);
@@ -71,13 +94,6 @@ export class PlaybackManager {
         this.isInitialized = false;
     }
 
-    private validateSpeed(value: unknown): number {
-        if (typeof value !== 'number' || !Number.isFinite(value)) {
-            return DEFAULT_SPEED;
-        }
-        return Math.max(MIN_SPEED, Math.min(MAX_SPEED, Math.round(value * 100) / 100));
-    }
-
     private getVideoElement(): HTMLVideoElement | null {
         return (
             document.querySelector<HTMLVideoElement>('video.html5-main-video') ??
@@ -86,12 +102,44 @@ export class PlaybackManager {
     }
 
     private isMusicVideo(): boolean {
-        return !!document.querySelector('badge-shape[aria-label="Official Artist Channel"]');
+        const officialArtistBadge = document.querySelector(
+            'badge-shape[aria-label="Official Artist Channel"], [aria-label="Official Artist Channel"]',
+        );
+        if (officialArtistBadge) {
+            return true;
+        }
+
+        const channelName = document.querySelector('#owner-name a')?.textContent?.trim();
+        if (channelName?.endsWith(' - Topic')) {
+            return true;
+        }
+
+        return false;
     }
 
-    private applySpeed(): void {
+    private shouldEnforcePlayback(): boolean {
+        return !this.isMusicVideo() || this.manualMusicOverride;
+    }
+
+    private getNavigationUrl(): string {
+        return globalThis.location.href;
+    }
+
+    private resetManualMusicOverrideIfNavigated(): void {
+        const currentUrl = this.getNavigationUrl();
+        if (currentUrl === this.lastNavigationUrl) {
+            return;
+        }
+
+        this.lastNavigationUrl = currentUrl;
+        this.manualMusicOverride = false;
+    }
+
+    private applySpeed(options?: { force?: boolean }): void {
         const video = this.getVideoElement();
-        if (!video || this.isMusicVideo()) return;
+        if (!video) return;
+
+        if (!options?.force && !this.shouldEnforcePlayback()) return;
 
         if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
             try {
@@ -108,7 +156,7 @@ export class PlaybackManager {
         }
 
         this.intervalId = setInterval(() => {
-            if (!this.isMusicVideo()) {
+            if (this.shouldEnforcePlayback()) {
                 this.applySpeed();
             }
         }, ENFORCEMENT_INTERVAL_MS);
@@ -153,7 +201,7 @@ export class PlaybackManager {
         video.setAttribute(ATTACHED_MARKER, 'true');
 
         video.addEventListener('ratechange', () => {
-            if (this.isMusicVideo()) return;
+            if (!this.shouldEnforcePlayback()) return;
 
             if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
                 this.applySpeed();

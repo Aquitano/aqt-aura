@@ -1,15 +1,16 @@
 import { safeQuerySelector } from './dom';
-import { PlaybackManager } from './playback';
+import {
+    DEFAULT_PLAYBACK_SPEED,
+    formatPlaybackSpeed,
+    MAX_PLAYBACK_SPEED,
+    MIN_PLAYBACK_SPEED,
+    PLAYBACK_SPEED_STEP,
+    PlaybackManager,
+} from './playback';
 
 const OVERLAY_ID = 'aqt-speed-overlay';
 const MENU_ID = 'aqt-speed-menu';
 const SLIDER_CSS_ID = 'aqt-slider-css';
-
-const MIN_SPEED = 0.25;
-const MAX_SPEED = 16;
-const SLIDER_MAX = 3;
-const SPEED_STEP = 0.25;
-const DEFAULT_SPEED = 1;
 
 const MENU_HIDE_DELAY_MS = 300;
 const MENU_TRANSITION_MS = 200;
@@ -49,6 +50,7 @@ export class OverlayManager {
     private controlsObserver: MutationObserver | null = null;
     private bodyObserver: MutationObserver | null = null;
     private navigationListener: (() => void) | null = null;
+    private readonly syncedVideos = new WeakSet<HTMLVideoElement>();
 
     constructor(playbackManager: PlaybackManager) {
         this.playbackManager = playbackManager;
@@ -86,6 +88,12 @@ export class OverlayManager {
 
     private syncWithVideo(): void {
         const attachVideoListener = (video: HTMLVideoElement) => {
+            if (this.syncedVideos.has(video)) {
+                this.updateDisplay(video.playbackRate);
+                return;
+            }
+
+            this.syncedVideos.add(video);
             video.addEventListener('ratechange', () => {
                 this.updateDisplay(video.playbackRate);
             });
@@ -150,7 +158,7 @@ export class OverlayManager {
 
     private createSpeedText(): void {
         this.speedText = document.createElement('span');
-        this.speedText.textContent = '1.0x';
+        this.speedText.textContent = formatPlaybackSpeed(DEFAULT_PLAYBACK_SPEED);
         this.speedText.className = 'ytp-button';
         this.speedText.title = 'Click to reset, Scroll to change';
         Object.assign(this.speedText.style, {
@@ -207,7 +215,7 @@ export class OverlayManager {
     private createResetButton(): HTMLElement {
         const resetBtn = document.createElement('div');
         resetBtn.textContent = '↺';
-        resetBtn.title = 'Reset to 1.0x';
+        resetBtn.title = `Reset to ${formatPlaybackSpeed(DEFAULT_PLAYBACK_SPEED)}`;
         Object.assign(resetBtn.style, {
             cursor: 'pointer',
             fontSize: '16px',
@@ -226,7 +234,7 @@ export class OverlayManager {
         });
         resetBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.playbackManager.setSpeed(DEFAULT_SPEED);
+            this.playbackManager.setSpeed(DEFAULT_PLAYBACK_SPEED);
         });
 
         return resetBtn;
@@ -237,10 +245,10 @@ export class OverlayManager {
 
         const slider = document.createElement('input');
         slider.type = 'range';
-        slider.min = String(MIN_SPEED);
-        slider.max = String(SLIDER_MAX);
-        slider.step = '0.05';
-        slider.value = String(DEFAULT_SPEED);
+        slider.min = String(MIN_PLAYBACK_SPEED);
+        slider.max = String(MAX_PLAYBACK_SPEED);
+        slider.step = String(PLAYBACK_SPEED_STEP);
+        slider.value = String(DEFAULT_PLAYBACK_SPEED);
         slider.className = 'aqt-speed-slider';
 
         slider.addEventListener('input', (e) => {
@@ -266,7 +274,7 @@ export class OverlayManager {
 
         this.speedText.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.playbackManager.setSpeed(DEFAULT_SPEED);
+            this.playbackManager.setSpeed(DEFAULT_PLAYBACK_SPEED);
         });
 
         this.container.addEventListener(
@@ -288,8 +296,8 @@ export class OverlayManager {
 
         const current = video.playbackRate;
         const direction = e.deltaY > 0 ? -1 : 1;
-        let newSpeed = current + direction * SPEED_STEP;
-        newSpeed = Math.max(MIN_SPEED, Math.min(newSpeed, MAX_SPEED));
+        let newSpeed = current + direction * PLAYBACK_SPEED_STEP;
+        newSpeed = Math.max(MIN_PLAYBACK_SPEED, Math.min(newSpeed, MAX_PLAYBACK_SPEED));
         newSpeed = Math.round(newSpeed * 100) / 100;
 
         this.playbackManager.setSpeed(newSpeed);
@@ -349,8 +357,7 @@ export class OverlayManager {
 
     private updateDisplay(speed: number): void {
         if (this.speedText) {
-            const displayText = speed % 1 === 0 ? speed.toFixed(0) : speed.toFixed(2);
-            this.speedText.textContent = `${displayText}x`;
+            this.speedText.textContent = formatPlaybackSpeed(speed);
         }
 
         if (this.sliderElement && document.activeElement !== this.sliderElement) {

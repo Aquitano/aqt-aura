@@ -1,3 +1,10 @@
+import {
+    DEFAULT_PLAYBACK_SPEED,
+    formatPlaybackSpeed,
+    MAX_PLAYBACK_SPEED,
+    MIN_PLAYBACK_SPEED,
+    PLAYBACK_SPEED_STEP,
+} from '@/utils/playback';
 import { YoutubeElement } from '@/utils/youtube';
 import { useMemo, useState } from 'react';
 import { CollapsibleSection } from './CollapsibleSection';
@@ -42,16 +49,20 @@ export function YouTubeScreen({ onBack, elements, onToggleItem, playbackSpeed, o
                 <div className="speed-control-row">
                     <input
                         type="range"
-                        min="0.25"
-                        max="5"
-                        step="0.25"
+                        min={String(MIN_PLAYBACK_SPEED)}
+                        max={String(MAX_PLAYBACK_SPEED)}
+                        step={String(PLAYBACK_SPEED_STEP)}
                         value={playbackSpeed}
                         onChange={(e) => onSpeedChange(Number.parseFloat(e.target.value))}
                         className="speed-slider"
                     />
                     <div className="speed-value">
-                        <span>{playbackSpeed}x</span>
-                        <button className="reset-speed-btn" onClick={() => onSpeedChange(1)} title="Reset to 1x">
+                        <span>{formatPlaybackSpeed(playbackSpeed)}</span>
+                        <button
+                            className="reset-speed-btn"
+                            onClick={() => onSpeedChange(DEFAULT_PLAYBACK_SPEED)}
+                            title="Reset to 1x"
+                        >
                             ↺
                         </button>
                     </div>
