@@ -135,7 +135,7 @@ export default defineContentScript({
                     const query = chip.dataset.searchQuery ?? searchQuery;
                     window.open(buildSourceUrl(source, query, settings), '_blank', 'noopener,noreferrer');
                 },
-                { passive: true }
+                { passive: true },
             );
 
             return chip;
@@ -211,7 +211,7 @@ export default defineContentScript({
                         injectChips();
                     }
                 },
-                { timeout: 200 }
+                { timeout: 200 },
             );
         }
 
@@ -274,7 +274,10 @@ export default defineContentScript({
             }
         }
 
-        function handleStorageChange(changes: Record<string, { newValue?: unknown; oldValue?: unknown }>, areaName: string): void {
+        function handleStorageChange(
+            changes: Record<string, { newValue?: unknown; oldValue?: unknown }>,
+            areaName: string,
+        ): void {
             if (areaName !== 'local' || !(GOODLIB_STORAGE_KEY in changes)) return;
 
             const newSettings = changes[GOODLIB_STORAGE_KEY].newValue as Partial<GoodlibSettings> | undefined;

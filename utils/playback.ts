@@ -13,10 +13,7 @@ export function normalizePlaybackSpeed(value: unknown): number {
         return DEFAULT_PLAYBACK_SPEED;
     }
 
-    return Math.max(
-        MIN_PLAYBACK_SPEED,
-        Math.min(MAX_PLAYBACK_SPEED, Math.round(value * 100) / 100),
-    );
+    return Math.max(MIN_PLAYBACK_SPEED, Math.min(MAX_PLAYBACK_SPEED, Math.round(value * 100) / 100));
 }
 
 export function formatPlaybackSpeed(value: number): string {
@@ -32,6 +29,8 @@ export class PlaybackManager {
     private videoCheckTimeout: ReturnType<typeof setTimeout> | null = null;
     private manualMusicOverride = false;
     private lastNavigationUrl = '';
+    private cachedIsMusicVideo: boolean | null = null;
+    private cachedMusicVideoUrl = '';
 
     constructor() {
         this.setupVideoObserver();
@@ -46,9 +45,7 @@ export class PlaybackManager {
             this.currentSpeed = normalizePlaybackSpeed(storedSpeed);
             this.lastNavigationUrl = this.getNavigationUrl();
 
-            if (this.shouldEnforcePlayback()) {
-                this.applySpeed();
-            }
+            this.applySpeed();
 
             this.startEnforcement();
             this.isInitialized = true;
@@ -102,27 +99,57 @@ export class PlaybackManager {
     }
 
     private isMusicVideo(): boolean {
+        const currentUrl = this.getNavigationUrl();
+
+        if (this.cachedMusicVideoUrl !== currentUrl) {
+            this.cachedMusicVideoUrl = currentUrl;
+            this.cachedIsMusicVideo = null;
+        }
+
+        if (this.cachedIsMusicVideo === true) {
+            return true;
+        }
+
         const officialArtistBadge = document.querySelector(
             'badge-shape[aria-label="Official Artist Channel"], [aria-label="Official Artist Channel"]',
         );
         if (officialArtistBadge) {
+            if (!this.cachedIsMusicVideo) {
+                console.log('[AQT] Official Artist Channel detected');
+            }
+            this.cachedIsMusicVideo = true;
             return true;
         }
 
         const channelName = document.querySelector('#owner-name a')?.textContent?.trim();
         if (channelName?.endsWith(' - Topic')) {
+            if (!this.cachedIsMusicVideo) {
+                console.log('[AQT] Topic channel detected');
+            }
+            this.cachedIsMusicVideo = true;
             return true;
         }
 
         return false;
     }
 
-    private shouldEnforcePlayback(): boolean {
-        return !this.isMusicVideo() || this.manualMusicOverride;
+    private getTargetSpeed(): number {
+        if (this.isMusicVideo() && !this.manualMusicOverride) {
+            return 1;
+        }
+        return this.currentSpeed;
     }
 
     private getNavigationUrl(): string {
-        return globalThis.location.href;
+        try {
+            const url = new URL(globalThis.location.href);
+            if (url.pathname.startsWith('/shorts/')) {
+                return url.pathname;
+            }
+            return url.searchParams.get('v') || globalThis.location.href;
+        } catch {
+            return globalThis.location.href;
+        }
     }
 
     private resetManualMusicOverrideIfNavigated(): void {
@@ -139,11 +166,11 @@ export class PlaybackManager {
         const video = this.getVideoElement();
         if (!video) return;
 
-        if (!options?.force && !this.shouldEnforcePlayback()) return;
+        const targetSpeed = options?.force ? this.currentSpeed : this.getTargetSpeed();
 
-        if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
+        if (Math.abs(video.playbackRate - targetSpeed) > SPEED_TOLERANCE) {
             try {
-                video.playbackRate = this.currentSpeed;
+                video.playbackRate = targetSpeed;
             } catch {
                 // Ignore
             }
@@ -156,9 +183,7 @@ export class PlaybackManager {
         }
 
         this.intervalId = setInterval(() => {
-            if (this.shouldEnforcePlayback()) {
-                this.applySpeed();
-            }
+            this.applySpeed();
         }, ENFORCEMENT_INTERVAL_MS);
     }
 
@@ -201,9 +226,9 @@ export class PlaybackManager {
         video.setAttribute(ATTACHED_MARKER, 'true');
 
         video.addEventListener('ratechange', () => {
-            if (!this.shouldEnforcePlayback()) return;
+            const targetSpeed = this.getTargetSpeed();
 
-            if (Math.abs(video.playbackRate - this.currentSpeed) > SPEED_TOLERANCE) {
+            if (Math.abs(video.playbackRate - targetSpeed) > SPEED_TOLERANCE) {
                 this.applySpeed();
             }
         });

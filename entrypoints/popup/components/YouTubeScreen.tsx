@@ -28,7 +28,7 @@ export function YouTubeScreen({ onBack, elements, onToggleItem, playbackSpeed, o
                 title: cat,
                 items: elements.filter((e) => (e.category || 'Other') === cat),
             })).filter((g) => g.items.length > 0),
-        [elements]
+        [elements],
     );
 
     const toggleSection = (title: string) => {

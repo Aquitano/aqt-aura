@@ -2,7 +2,7 @@ export function getStorageValue<T>(
     stored: Record<string, unknown>,
     key: string,
     defaultValue: T,
-    validator?: (value: unknown) => value is T
+    validator?: (value: unknown) => value is T,
 ): T {
     const value = stored[key];
 
@@ -28,7 +28,7 @@ export function isTimeLimitArray(value: unknown): value is Array<{ id: string; d
             'minutes' in item &&
             typeof item.id === 'string' &&
             typeof item.domain === 'string' &&
-            typeof item.minutes === 'number'
+            typeof item.minutes === 'number',
     );
 }
 

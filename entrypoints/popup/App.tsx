@@ -62,9 +62,7 @@ export default function App() {
             </header>
 
             <main>
-                {screen === 'home' && (
-                    <HomeScreen onNavigate={(s) => setScreen(s)} />
-                )}
+                {screen === 'home' && <HomeScreen onNavigate={(s) => setScreen(s)} />}
                 {screen === 'youtube' && (
                     <YouTubeScreen
                         onBack={() => setScreen('home')}
@@ -74,12 +72,8 @@ export default function App() {
                         onSpeedChange={setPlaybackSpeed}
                     />
                 )}
-                {screen === 'timelimits' && (
-                    <TimeLimitScreen onBack={() => setScreen('home')} />
-                )}
-                {screen === 'goodreads' && (
-                    <GoodreadsScreen onBack={() => setScreen('home')} />
-                )}
+                {screen === 'timelimits' && <TimeLimitScreen onBack={() => setScreen('home')} />}
+                {screen === 'goodreads' && <GoodreadsScreen onBack={() => setScreen('home')} />}
             </main>
         </div>
     );

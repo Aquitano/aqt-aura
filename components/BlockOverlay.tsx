@@ -29,14 +29,11 @@ export const BlockOverlay = ({ onUnblock }: { onUnblock?: () => void }) => {
                     boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
                 }}
             >
-                <h1 style={{ margin: '0 0 1rem 0', fontSize: '24px', fontWeight: 600 }}>
-                    Time Limit Exceeded
-                </h1>
+                <h1 style={{ margin: '0 0 1rem 0', fontSize: '24px', fontWeight: 600 }}>Time Limit Exceeded</h1>
                 <p style={{ margin: '0 0 2rem 0', color: '#888', lineHeight: 1.5 }}>
-                    You've reached your daily limit for this website.
-                    Time to get back to what matters.
+                    You've reached your daily limit for this website. Time to get back to what matters.
                 </p>
-                <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                     <button
                         onClick={() => {
                             globalThis.history.back();

@@ -22,7 +22,7 @@ export default defineContentScript({
                 },
                 onRemove: (root) => {
                     root?.unmount();
-                }
+                },
             });
             ui.mount();
         };
