@@ -3,7 +3,7 @@ import { mergeWithDefaults } from './storage';
 import { DEFAULT_ELEMENTS, PageType, STORAGE_KEY, YoutubeElement } from './youtube';
 import { SPECIAL_HANDLERS } from './youtube-handlers';
 
-const OBSERVER_DEBOUNCE_MS = 50;
+const OBSERVER_DEBOUNCE_MS = 250;
 
 const DEFAULT_PROPERTY = 'display';
 const DEFAULT_STYLE = 'none';
@@ -105,7 +105,9 @@ export class ElementManager {
     private setupObserver(): void {
         this.observer?.disconnect();
 
-        const debouncedApply = debounce(() => this.applyAllElements(false), OBSERVER_DEBOUNCE_MS);
+        const debouncedApply = debounce(() => {
+            requestAnimationFrame(() => this.applyAllElements(false));
+        }, OBSERVER_DEBOUNCE_MS);
 
         this.observer = new MutationObserver(debouncedApply);
 

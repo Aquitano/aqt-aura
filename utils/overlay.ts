@@ -48,7 +48,7 @@ export class OverlayManager {
     private sliderElement: HTMLInputElement | null = null;
     private menuTimeout: ReturnType<typeof setTimeout> | undefined;
     private controlsObserver: MutationObserver | null = null;
-    private bodyObserver: MutationObserver | null = null;
+    private injectRetryInterval: ReturnType<typeof setInterval> | null = null;
     private navigationListener: (() => void) | null = null;
     private readonly syncedVideos = new WeakSet<HTMLVideoElement>();
 
@@ -65,7 +65,10 @@ export class OverlayManager {
     destroy(): void {
         this.clearMenuTimeout();
         this.controlsObserver?.disconnect();
-        this.bodyObserver?.disconnect();
+        if (this.injectRetryInterval !== null) {
+            clearInterval(this.injectRetryInterval);
+            this.injectRetryInterval = null;
+        }
         this.container?.remove();
         document.getElementById(SLIDER_CSS_ID)?.remove();
 
@@ -370,25 +373,25 @@ export class OverlayManager {
             this.injectOverlay();
         });
 
-        const controls = safeQuerySelector('.ytp-right-controls');
-        if (controls) {
-            const parent = controls.parentElement ?? document.body;
-            this.controlsObserver.observe(parent, { childList: true, subtree: true });
-        } else {
-            this.bodyObserver = new MutationObserver(() => {
-                const foundControls = safeQuerySelector('.ytp-right-controls');
-                if (foundControls && this.controlsObserver) {
-                    this.injectOverlay();
-                    const parent = foundControls.parentElement ?? document.body;
-                    this.controlsObserver.observe(parent, { childList: true, subtree: true });
-                    this.bodyObserver?.disconnect();
-                    this.bodyObserver = null;
-                }
-            });
+        const tryAttach = () => {
+            const controls = safeQuerySelector('.ytp-right-controls');
+            if (controls && this.controlsObserver) {
+                const parent = controls.parentElement ?? document.body;
+                this.controlsObserver.observe(parent, { childList: true, subtree: true });
 
-            if (document.body) {
-                this.bodyObserver.observe(document.body, { childList: true, subtree: true });
+                if (this.injectRetryInterval !== null) {
+                    clearInterval(this.injectRetryInterval);
+                    this.injectRetryInterval = null;
+                }
+
+                this.injectOverlay();
             }
+        };
+
+        tryAttach();
+
+        if (this.injectRetryInterval === null && !safeQuerySelector('.ytp-right-controls')) {
+            this.injectRetryInterval = setInterval(tryAttach, 1000);
         }
     }
 }

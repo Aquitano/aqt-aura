@@ -24,16 +24,15 @@ export function formatPlaybackSpeed(value: number): string {
 export class PlaybackManager {
     private currentSpeed = DEFAULT_PLAYBACK_SPEED;
     private intervalId: ReturnType<typeof setInterval> | undefined;
-    private observer: MutationObserver | null = null;
     private isInitialized = false;
-    private videoCheckTimeout: ReturnType<typeof setTimeout> | null = null;
     private manualMusicOverride = false;
     private lastNavigationUrl = '';
     private cachedIsMusicVideo: boolean | null = null;
     private cachedMusicVideoUrl = '';
+    private navigationListener: (() => void) | null = null;
 
     constructor() {
-        this.setupVideoObserver();
+        this.setupEventListeners();
     }
 
     async initialize(): Promise<void> {
@@ -81,13 +80,11 @@ export class PlaybackManager {
             this.intervalId = undefined;
         }
 
-        if (this.videoCheckTimeout) {
-            clearTimeout(this.videoCheckTimeout);
-            this.videoCheckTimeout = null;
+        if (this.navigationListener) {
+            document.removeEventListener('yt-navigate-finish', this.navigationListener);
+            this.navigationListener = null;
         }
 
-        this.observer?.disconnect();
-        this.observer = null;
         this.isInitialized = false;
     }
 
@@ -183,37 +180,24 @@ export class PlaybackManager {
         }
 
         this.intervalId = setInterval(() => {
+            const video = this.getVideoElement();
+            if (video) {
+                this.attachVideoListeners(video);
+            }
             this.applySpeed();
         }, ENFORCEMENT_INTERVAL_MS);
     }
 
-    private setupVideoObserver(): void {
-        this.observer = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.addedNodes.length === 0) continue;
-
-                if (this.videoCheckTimeout) {
-                    clearTimeout(this.videoCheckTimeout);
-                }
-
-                this.videoCheckTimeout = setTimeout(() => {
-                    const video = this.getVideoElement();
-                    if (video) {
-                        this.attachVideoListeners(video);
-                        this.applySpeed();
-                    }
-                    this.videoCheckTimeout = null;
-                }, 100);
-                break;
+    private setupEventListeners(): void {
+        this.navigationListener = () => {
+            const video = this.getVideoElement();
+            if (video) {
+                this.attachVideoListeners(video);
+                this.applySpeed();
             }
-        });
+        };
 
-        if (document.body) {
-            this.observer.observe(document.body, {
-                childList: true,
-                subtree: true,
-            });
-        }
+        document.addEventListener('yt-navigate-finish', this.navigationListener);
 
         const video = this.getVideoElement();
         if (video) {
