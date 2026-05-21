@@ -21,7 +21,8 @@ export type PageType = (typeof PAGE_TYPES)[keyof typeof PAGE_TYPES];
 
 export interface YoutubeElement {
     id: string;
-    selector: string;
+    selector?: string;
+    styles?: readonly string[];
     checked: boolean;
     property?: string;
     style?: string;
@@ -820,6 +821,22 @@ export const DEFAULT_ELEMENTS: YoutubeElement[] = [
         style: DISPLAY_NONE,
         pageTypes: [PAGE_TYPES.VIDEO],
         label: 'Related Video Tabs',
+        category: 'Video Player',
+    },
+    {
+        id: 'video-related-categories',
+        styles: ['#related yt-related-chip-cloud-renderer'],
+        checked: false,
+        pageTypes: [],
+        label: 'Hide Categories of Related Videos',
+        category: 'Video Player',
+    },
+    {
+        id: 'video-related-infinite-scroll',
+        styles: ['#related ytd-continuation-item-renderer'],
+        checked: false,
+        pageTypes: [],
+        label: 'Disable Infinite Related Videos Scrolling',
         category: 'Video Player',
     },
     {

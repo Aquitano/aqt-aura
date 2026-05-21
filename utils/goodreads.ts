@@ -112,7 +112,7 @@ export function isLightThemeSite(): boolean {
 }
 
 export function resetSiteCache(): void {
-    cachedSiteKey = undefined;
+    cachedSiteKey = null;
 }
 
 export function normalizeText(value: string): string {

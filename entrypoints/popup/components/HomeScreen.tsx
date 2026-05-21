@@ -1,5 +1,5 @@
 interface HomeScreenProps {
-    readonly onNavigate: (screen: 'youtube' | 'timelimits' | 'goodreads') => void;
+    readonly onNavigate: (screen: 'youtube' | 'timelimits' | 'goodreads' | 'blinkist') => void;
 }
 
 export function HomeScreen({ onNavigate }: HomeScreenProps) {
@@ -44,6 +44,22 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                 <div className="nav-card-info">
                     <h3>Book Search</h3>
                     <p>Quick links on Goodreads & more</p>
+                </div>
+                <div className="nav-arrow">→</div>
+            </button>
+
+            <button className="nav-card" onClick={() => onNavigate('blinkist')} type="button">
+                <div
+                    className="nav-card-icon generic-icon"
+                    style={{ background: 'rgba(168, 85, 247, 0.12)', color: '#c084fc' }}
+                >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" />
+                    </svg>
+                </div>
+                <div className="nav-card-info">
+                    <h3>Blinkist Library</h3>
+                    <p>Read saved book summaries offline</p>
                 </div>
                 <div className="nav-arrow">→</div>
             </button>

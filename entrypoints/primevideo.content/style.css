@@ -1,0 +1,18 @@
+/* Disable the background drop (black overlay) when controls are open. */
+.atvwebplayersdk-player-cont .f1makowq,
+.atvwebplayersdk-player-cont .fkpovp9,
+.f1makowq,
+.fkpovp9,
+.cascadesContainer .webPlayer .overlaysContainer .gradientOverlay,
+.atvwebplayersdk-overlays-container > div:first-child,
+.atvwebplayersdk-player-cont > div:first-child > div:first-child > div:first-child > div:first-child,
+.atvwebplayersdk-player-container > div:first-child > div:first-child > div:first-child > div:first-child,
+.atvwebplayersdk-player-container > div:first-child > div:first-child > div:first-child > div:first-child > div,
+.f1makowq > div,
+.fkpovp9 > div {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}

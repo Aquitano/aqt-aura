@@ -7,6 +7,7 @@ const OBSERVER_DEBOUNCE_MS = 250;
 
 const DEFAULT_PROPERTY = 'display';
 const DEFAULT_STYLE = 'none';
+const STYLE_ELEMENT_ID_PREFIX = 'aqt-youtube-style-';
 
 export class ElementManager {
     private elements: YoutubeElement[] = [];
@@ -120,7 +121,9 @@ export class ElementManager {
     }
 
     private processElement(element: YoutubeElement, shouldBeActive: boolean): void {
-        const nodes = selectByXPath(element.selector);
+        this.applyCssStyles(element, shouldBeActive);
+
+        const nodes = element.selector ? selectByXPath(element.selector) : [];
 
         const handler = SPECIAL_HANDLERS[element.id];
         if (handler) {
@@ -136,6 +139,52 @@ export class ElementManager {
         }
 
         this.applyStyles(nodes, element, shouldBeActive);
+    }
+
+    private applyCssStyles(element: YoutubeElement, shouldBeActive: boolean): void {
+        if (!element.styles || element.styles.length === 0) {
+            return;
+        }
+
+        const styleElementId = `${STYLE_ELEMENT_ID_PREFIX}${CSS.escape(element.id)}`;
+        const existingStyle = document.getElementById(styleElementId);
+
+        if (!shouldBeActive) {
+            existingStyle?.remove();
+            return;
+        }
+
+        const cssText = element.styles.map((style) => this.toCssRule(style)).filter(Boolean).join('\n');
+        if (!cssText) {
+            existingStyle?.remove();
+            return;
+        }
+
+        if (existingStyle) {
+            if (existingStyle.textContent !== cssText) {
+                existingStyle.textContent = cssText;
+            }
+            return;
+        }
+
+        const styleElement = document.createElement('style');
+        styleElement.id = styleElementId;
+        styleElement.textContent = cssText;
+        document.documentElement.appendChild(styleElement);
+    }
+
+    private toCssRule(style: string): string {
+        const trimmedStyle = style.trim();
+
+        if (!trimmedStyle) {
+            return '';
+        }
+
+        if (trimmedStyle.includes('!important')) {
+            return trimmedStyle;
+        }
+
+        return `${trimmedStyle} { display: none !important; }`;
     }
 
     private applyStyles(nodes: readonly HTMLElement[], element: YoutubeElement, shouldBeActive: boolean): void {

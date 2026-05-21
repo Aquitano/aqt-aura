@@ -17,5 +17,14 @@ export default defineConfig([
     tseslint.configs.recommended,
     reactPlugin.configs.flat['jsx-runtime'],
     { files: ['**/*.json'], plugins: { json }, language: 'json/json', extends: ['json/recommended'] },
-    { files: ['**/*.css'], plugins: { css }, language: 'css/css', extends: ['css/recommended'] },
+    {
+        files: ['**/*.css'],
+        plugins: { css },
+        language: 'css/css',
+        extends: ['css/recommended'],
+        rules: {
+            'css/use-baseline': 'off',
+            'css/no-important': 'off',
+        },
+    },
 ]);

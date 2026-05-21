@@ -7,8 +7,9 @@ import { GoodreadsScreen } from './components/GoodreadsScreen';
 import { HomeScreen } from './components/HomeScreen';
 import { TimeLimitScreen } from './components/TimeLimitScreen';
 import { YouTubeScreen } from './components/YouTubeScreen';
+import { BlinkistScreen } from './components/BlinkistScreen';
 
-type Screen = 'home' | 'youtube' | 'timelimits' | 'goodreads';
+type Screen = 'home' | 'youtube' | 'timelimits' | 'goodreads' | 'blinkist';
 
 export default function App() {
     const [screen, setScreen] = useState<Screen>('home');
@@ -74,6 +75,7 @@ export default function App() {
                 )}
                 {screen === 'timelimits' && <TimeLimitScreen onBack={() => setScreen('home')} />}
                 {screen === 'goodreads' && <GoodreadsScreen onBack={() => setScreen('home')} />}
+                {screen === 'blinkist' && <BlinkistScreen onBack={() => setScreen('home')} />}
             </main>
         </div>
     );
