@@ -74,6 +74,30 @@ function getBookInfoFromDocumentTitle(): { title: string; author: string } {
     return { title, author };
 }
 
+function isGenericTitle(title: string): boolean {
+    const lower = title.toLowerCase();
+    return (
+        lower === 'blinkist' ||
+        lower === 'blinkist reader' ||
+        lower.includes('serving you book insights') ||
+        lower.includes('book summaries') ||
+        lower === 'unknown book' ||
+        lower === ''
+    );
+}
+
+async function getValidBookInfo(timeoutMs: number = 10000): Promise<{ title: string; author: string }> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        const { title, author } = getBookInfoFromDocumentTitle();
+        if (title && !isGenericTitle(title)) {
+            return { title, author };
+        }
+        await new Promise(r => setTimeout(r, 500));
+    }
+    return getBookInfoFromDocumentTitle();
+}
+
 function getBookCoverUrl(): string {
     const ogImage = document.querySelector('meta[property="og:image"]');
     if (ogImage && ogImage.getAttribute('content')) {
@@ -424,6 +448,10 @@ function setupReaderScraper(slug: string) {
             <button class="aqt-action-btn aqt-scrape-btn" type="button">Auto-Scrape Book</button>
             <button class="aqt-action-btn aqt-single-btn" type="button">Save Current Page</button>
         </div>
+        <label class="aqt-checkbox-label">
+            <input type="checkbox" class="aqt-autosave-checkbox">
+            Auto-save on load (10s delay)
+        </label>
     `;
 
     container.appendChild(header);
@@ -449,6 +477,8 @@ function setupReaderScraper(slug: string) {
     const progressContainer = body.querySelector('.aqt-progress-container') as HTMLDivElement;
     const progressFill = body.querySelector('.aqt-progress-fill') as HTMLDivElement;
     const progressLabel = body.querySelector('.aqt-progress-label') as HTMLDivElement;
+
+    const autosaveCheckbox = body.querySelector('.aqt-autosave-checkbox') as HTMLInputElement;
 
     const setStatus = (msg: string) => {
         statusText.textContent = msg;
@@ -476,7 +506,7 @@ function setupReaderScraper(slug: string) {
             }
 
             const existingBook = await getBlinkistBookContent(slug);
-            const { title, author } = getBookInfoFromDocumentTitle();
+            const { title, author } = await getValidBookInfo(10000);
             const coverUrl = getBookCoverUrl();
             const description = getBookDescription();
 
@@ -569,7 +599,7 @@ function setupReaderScraper(slug: string) {
                 setStatus('Success! Full summary stored.');
             } else {
                 const existingBook = await getBlinkistBookContent(slug);
-                const { title, author } = getBookInfoFromDocumentTitle();
+                const { title, author } = await getValidBookInfo(10000);
                 const coverUrl = getBookCoverUrl();
                 const description = getBookDescription();
 
@@ -670,9 +700,42 @@ function setupReaderScraper(slug: string) {
         void runAutoScrape();
     });
 
-    // Auto-scrape current page on load silently in the background
-    setTimeout(() => {
-        void savePage().catch(console.error);
+    // Check storage and handle autosave preferences on load
+    setTimeout(async () => {
+        try {
+            const stored = await browser.storage.local.get('blinkist_autosave_enabled');
+            const autosaveEnabled = stored.blinkist_autosave_enabled === true;
+            if (autosaveCheckbox) {
+                autosaveCheckbox.checked = autosaveEnabled;
+            }
+
+            // Listen for checkbox changes
+            autosaveCheckbox.addEventListener('change', async () => {
+                await browser.storage.local.set({ blinkist_autosave_enabled: autosaveCheckbox.checked });
+            });
+
+            const existingBook = await getBlinkistBookContent(slug);
+            if (existingBook && existingBook.chapters && existingBook.chapters.length > 0) {
+                setStatus(`Saved summary loaded (${existingBook.chapters.length} blinks).`);
+            } else {
+                setStatus('Ready to save summary.');
+            }
+
+            // If auto-save is enabled and the book is not saved yet, trigger save after delay (e.g. 10 seconds total)
+            if (autosaveEnabled) {
+                const hasExisting = existingBook && existingBook.chapters && existingBook.chapters.length > 0;
+                if (!hasExisting) {
+                    setStatus('Auto-save active. Waiting 10s for reader metadata to settle...');
+                    setTimeout(async () => {
+                        setStatus('Auto-saving summary...');
+                        await savePage();
+                    }, 8500); // 1.5s already passed, wait another 8.5s to make it 10s total
+                }
+            }
+        } catch (e) {
+            console.error('[AQT Scraper] Error checking library status:', e);
+            setStatus('Ready to save summary.');
+        }
     }, 1500);
 }
 
@@ -680,11 +743,15 @@ function setupBookPageScraper(slug: string) {
     // Optionally save book detail page metadata
     setTimeout(async () => {
         try {
-            const { title, author } = getBookInfoFromDocumentTitle();
+            const stored = await browser.storage.local.get('blinkist_autosave_enabled');
+            const autosaveEnabled = stored.blinkist_autosave_enabled === true;
+            if (!autosaveEnabled) return;
+
+            const { title, author } = await getValidBookInfo(5000);
+            if (!title || isGenericTitle(title)) return;
+
             const coverUrl = getBookCoverUrl();
             const description = getBookDescription();
-
-            if (!title) return;
 
             const existingBook = await getBlinkistBookContent(slug);
             const bookContent: BlinkistBookContent = existingBook || {
