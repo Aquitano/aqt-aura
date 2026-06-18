@@ -72,9 +72,7 @@ export function BlinkistScreen({ onBack }: BlinkistScreenProps) {
     const filteredBooks = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
         if (!query) return books;
-        return books.filter(
-            (b) => b.title.toLowerCase().includes(query) || b.author.toLowerCase().includes(query),
-        );
+        return books.filter((b) => b.title.toLowerCase().includes(query) || b.author.toLowerCase().includes(query));
     }, [books, searchQuery]);
 
     const formatDate = (timestamp: number) => {
@@ -90,7 +88,9 @@ export function BlinkistScreen({ onBack }: BlinkistScreenProps) {
             <div className="screen-content">
                 <div className="sub-header">
                     <button className="back-btn" onClick={onBack} type="button">
-                        <span aria-hidden="true" className="back-btn-icon">←</span>
+                        <span aria-hidden="true" className="back-btn-icon">
+                            ←
+                        </span>
                         <span>Back</span>
                     </button>
                     <h2>Blinkist Library</h2>
@@ -107,12 +107,10 @@ export function BlinkistScreen({ onBack }: BlinkistScreenProps) {
         return (
             <div className="screen-content fade-in blinkist-reader-mode">
                 <div className="sub-header blinkist-reader-header">
-                    <button
-                        className="back-btn"
-                        onClick={() => setSelectedBookSlug(null)}
-                        type="button"
-                    >
-                        <span aria-hidden="true" className="back-btn-icon">←</span>
+                    <button className="back-btn" onClick={() => setSelectedBookSlug(null)} type="button">
+                        <span aria-hidden="true" className="back-btn-icon">
+                            ←
+                        </span>
                         <span>Library</span>
                     </button>
                     <div className="reader-settings-bar">
@@ -143,9 +141,7 @@ export function BlinkistScreen({ onBack }: BlinkistScreenProps) {
                         </div>
                         <button
                             className={`settings-toggle-btn ${readerLayout === 'continuous' ? 'active' : ''}`}
-                            onClick={() =>
-                                setReaderLayout(readerLayout === 'chapters' ? 'continuous' : 'chapters')
-                            }
+                            onClick={() => setReaderLayout(readerLayout === 'chapters' ? 'continuous' : 'chapters')}
                             title="Toggle Layout"
                             type="button"
                         >
@@ -264,7 +260,9 @@ export function BlinkistScreen({ onBack }: BlinkistScreenProps) {
         <div className="screen-content fade-in">
             <div className="sub-header">
                 <button className="back-btn" onClick={onBack} type="button">
-                    <span aria-hidden="true" className="back-btn-icon">←</span>
+                    <span aria-hidden="true" className="back-btn-icon">
+                        ←
+                    </span>
                     <span>Back</span>
                 </button>
                 <h2>Blinkist Library</h2>
@@ -285,11 +283,7 @@ export function BlinkistScreen({ onBack }: BlinkistScreenProps) {
                     spellCheck={false}
                 />
                 {searchQuery && (
-                    <button
-                        className="clear-search-btn"
-                        onClick={() => setSearchQuery('')}
-                        type="button"
-                    >
+                    <button className="clear-search-btn" onClick={() => setSearchQuery('')} type="button">
                         ×
                     </button>
                 )}
@@ -361,7 +355,11 @@ export function BlinkistScreen({ onBack }: BlinkistScreenProps) {
                     <div className="empty-library">
                         {searchQuery ? 'No summaries match your search.' : 'Your library is empty.'}
                         <p className="library-help-text">
-                            Open a summary on <a href="https://www.blinkist.com" target="_blank" rel="noopener noreferrer">Blinkist</a> and use the scraper overlay to add books to your library.
+                            Open a summary on{' '}
+                            <a href="https://www.blinkist.com" target="_blank" rel="noopener noreferrer">
+                                Blinkist
+                            </a>{' '}
+                            and use the scraper overlay to add books to your library.
                         </p>
                     </div>
                 )}
