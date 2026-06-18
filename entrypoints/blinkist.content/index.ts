@@ -19,8 +19,8 @@ export default defineContentScript({
     ],
     runAt: 'document_idle',
 
-    main() {
-        const slug = getBookSlug();
+    async main() {
+        const slug = await waitForValidSlug();
         if (!slug) return;
 
         const isReader = window.location.pathname.includes('/reader/');
@@ -32,6 +32,22 @@ export default defineContentScript({
         }
     },
 });
+
+async function waitForValidSlug(timeoutMs: number = 10000): Promise<string | null> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        const slug = getBookSlug();
+        if (slug && !slug.toLowerCase().includes('blinkist')) {
+            return slug;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    const slug = getBookSlug();
+    if (slug && !slug.toLowerCase().includes('blinkist')) {
+        return slug;
+    }
+    return null;
+}
 
 function getBookSlug(): string | null {
     const path = window.location.pathname;
@@ -79,6 +95,8 @@ function isGenericTitle(title: string): boolean {
     return (
         lower === 'blinkist' ||
         lower === 'blinkist reader' ||
+        lower.includes('blinkist:') ||
+        lower.includes('big ideas in small') ||
         lower.includes('serving you book insights') ||
         lower.includes('book summaries') ||
         lower === 'unknown book' ||
@@ -93,7 +111,7 @@ async function getValidBookInfo(timeoutMs: number = 10000): Promise<{ title: str
         if (title && !isGenericTitle(title)) {
             return { title, author };
         }
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
     }
     return getBookInfoFromDocumentTitle();
 }
@@ -132,7 +150,7 @@ function isSidebarOrNav(el: HTMLElement): boolean {
         const className = curr.className ? String(curr.className).toLowerCase() : '';
         const id = curr.id ? String(curr.id).toLowerCase() : '';
         const tagName = curr.tagName.toLowerCase();
-        
+
         if (
             tagName === 'aside' ||
             tagName === 'nav' ||
@@ -160,7 +178,7 @@ function isSidebarOrNav(el: HTMLElement): boolean {
 function getSharedContainer(elements: HTMLElement[]): HTMLElement | null {
     if (elements.length === 0) return null;
     if (elements.length === 1) return elements[0].parentElement;
-    
+
     let ancestor = elements[0].parentElement;
     while (ancestor && ancestor !== document.body) {
         let allContained = true;
@@ -180,21 +198,21 @@ function getSharedContainer(elements: HTMLElement[]): HTMLElement | null {
 
 function getContentContainer(): HTMLElement {
     const transcriptionComponents = Array.from(
-        document.querySelectorAll('[data-test-id="transcription-component"]')
+        document.querySelectorAll('[data-test-id="transcription-component"]'),
     ) as HTMLElement[];
-    
+
     if (transcriptionComponents.length > 0) {
         const shared = getSharedContainer(transcriptionComponents);
         if (shared) return shared;
     }
-    
+
     const selectors = [
         '.reader__container__content',
         '.reader__container',
         'article',
         'main',
         '[class*="reader__container"]',
-        '[class*="reader-container"]'
+        '[class*="reader-container"]',
     ];
     for (const sel of selectors) {
         const el = document.querySelector(sel);
@@ -218,17 +236,17 @@ function getChapterDividerSelector(container: HTMLElement): string {
 
 function extractChaptersFromPage(): BlinkistChapter[] {
     const container = getContentContainer();
-    
+
     // Find all start time markers
     const startTimeElements = Array.from(
-        container.querySelectorAll('[data-test-id="chapter-start-time"]')
+        container.querySelectorAll('[data-test-id="chapter-start-time"]'),
     ) as HTMLElement[];
-    
+
     // If we have start time elements, we can extract chapters based on their wrappers
     if (startTimeElements.length > 0) {
         const chapters: BlinkistChapter[] = [];
         let chapterIndex = 0;
-        
+
         for (const startTimeEl of startTimeElements) {
             // Find the closest ancestor that contains transcription components
             let wrapper: HTMLElement | null = startTimeEl.parentElement;
@@ -239,20 +257,26 @@ function extractChaptersFromPage(): BlinkistChapter[] {
                 wrapper = wrapper.parentElement;
             }
             if (!wrapper) wrapper = startTimeEl.parentElement || container;
-            
+
             // Ignore if the wrapper itself is inside a sidebar/nav
             if (isSidebarOrNav(wrapper)) {
                 continue;
             }
-            
+
             // Extract the chapter title:
             // Often there's an h4 (e.g. "Chapter 1 of 5") and/or an h2 (e.g. "Takeaway title")
-            const h4s = Array.from(wrapper.querySelectorAll('h4')).filter(el => !isSidebarOrNav(el));
-            const h2s = Array.from(wrapper.querySelectorAll('h2')).filter(el => !isSidebarOrNav(el));
-            
-            const h4Text = h4s.map(el => el.textContent?.trim()).filter(Boolean).join(' ');
-            const h2Text = h2s.map(el => el.textContent?.trim()).filter(Boolean).join(' ');
-            
+            const h4s = Array.from(wrapper.querySelectorAll('h4')).filter((el) => !isSidebarOrNav(el));
+            const h2s = Array.from(wrapper.querySelectorAll('h2')).filter((el) => !isSidebarOrNav(el));
+
+            const h4Text = h4s
+                .map((el) => el.textContent?.trim())
+                .filter(Boolean)
+                .join(' ');
+            const h2Text = h2s
+                .map((el) => el.textContent?.trim())
+                .filter(Boolean)
+                .join(' ');
+
             let titleText = '';
             if (h4Text && h2Text) {
                 if (h4Text.toLowerCase() === h2Text.toLowerCase()) {
@@ -263,21 +287,21 @@ function extractChaptersFromPage(): BlinkistChapter[] {
             } else {
                 titleText = h4Text || h2Text || `Chapter ${chapterIndex + 1}`;
             }
-            
+
             // Extract paragraphs: elements with data-test-id="transcription-component" or p tags
             const paragraphElements = Array.from(
-                wrapper.querySelectorAll('[data-test-id="transcription-component"], p')
+                wrapper.querySelectorAll('[data-test-id="transcription-component"], p'),
             ) as HTMLElement[];
-            
+
             // Filter paragraphs that are not children of another paragraph element
             const filteredParagraphs = paragraphElements.filter((el, index) => {
                 return !paragraphElements.some((otherEl, otherIdx) => otherIdx !== index && otherEl.contains(el));
             });
-            
+
             const paragraphs: string[] = [];
             for (const el of filteredParagraphs) {
                 if (isSidebarOrNav(el)) continue;
-                
+
                 const text = el.textContent?.trim();
                 if (text && text.length > 0) {
                     // Skip short buttons or indicators
@@ -294,46 +318,46 @@ function extractChaptersFromPage(): BlinkistChapter[] {
                     }
                 }
             }
-            
+
             chapters.push({
                 index: chapterIndex++,
                 title: titleText,
-                paragraphs
+                paragraphs,
             });
         }
-        
+
         if (chapters.length > 0) {
             return chapters;
         }
     }
-    
+
     // Fallback: If no chapter-start-time markers, run a safer version of the selector-based scraper
     const dividerSelector = getChapterDividerSelector(container);
-    
-    const elements = Array.from(container.querySelectorAll(
-        `${dividerSelector}, h2, [data-test-id="transcription-component"], p`
-    ));
-    
+
+    const elements = Array.from(
+        container.querySelectorAll(`${dividerSelector}, h2, [data-test-id="transcription-component"], p`),
+    );
+
     const filteredElements = elements.filter((el, index) => {
         if (isSidebarOrNav(el as HTMLElement)) return false;
         return !elements.some((otherEl, otherIdx) => otherIdx !== index && otherEl.contains(el));
     }) as HTMLElement[];
-    
+
     const chapters: BlinkistChapter[] = [];
     let currentChapter: BlinkistChapter | null = null;
     let chapterIndex = 0;
-    
+
     const isDivider = (el: HTMLElement): boolean => {
         return el.matches(dividerSelector);
     };
-    
+
     for (const el of filteredElements) {
         if (isDivider(el)) {
             const titleText = el.textContent?.trim() || `Chapter ${chapterIndex + 1}`;
             currentChapter = {
                 index: chapterIndex++,
                 title: titleText,
-                paragraphs: []
+                paragraphs: [],
             };
             chapters.push(currentChapter);
         } else {
@@ -343,34 +367,38 @@ function extractChaptersFromPage(): BlinkistChapter[] {
                     if (/^\d+\s*(of||\/)\s*\d+$/i.test(text)) continue;
                     if (/audio/i.test(text)) continue;
                 }
-                
+
                 if (!currentChapter) {
                     currentChapter = {
                         index: chapterIndex++,
                         title: 'Introduction',
-                        paragraphs: []
+                        paragraphs: [],
                     };
                     chapters.push(currentChapter);
                 }
-                
+
                 if (!currentChapter.paragraphs.includes(text)) {
                     currentChapter.paragraphs.push(text);
                 }
             }
         }
     }
-    
+
     return chapters;
 }
 
 function getChapterProgress(): { current: number; total: number } | null {
     // 1. Look in progress/counter elements
     const progressSelectors = [
-        '[class*="progress"]', '[class*="Progress"]',
-        '[class*="counter"]', '[class*="Counter"]',
-        '[class*="pagination"]', '[class*="Pagination"]',
-        '[data-test-id*="progress"]', '[data-test-id*="counter"]',
-        '[data-test-id*="pagination"]'
+        '[class*="progress"]',
+        '[class*="Progress"]',
+        '[class*="counter"]',
+        '[class*="Counter"]',
+        '[class*="pagination"]',
+        '[class*="Pagination"]',
+        '[data-test-id*="progress"]',
+        '[data-test-id*="counter"]',
+        '[data-test-id*="pagination"]',
     ];
     for (const sel of progressSelectors) {
         const el = document.querySelector(sel);
@@ -408,7 +436,7 @@ function navigateNext() {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', keyCode: 39, bubbles: true }));
 
     const nextButtons = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
-    const nextBtn = nextButtons.find(el => {
+    const nextBtn = nextButtons.find((el) => {
         const text = el.textContent?.toLowerCase() || '';
         const label = el.getAttribute('aria-label')?.toLowerCase() || '';
         return text.includes('next') || label.includes('next') || text === '→' || text === '>';
@@ -517,7 +545,7 @@ function setupReaderScraper(slug: string) {
                 coverUrl,
                 description,
                 chapters: [],
-                scrapedAt: Date.now()
+                scrapedAt: Date.now(),
             };
 
             bookContent.title = bookContent.title || title;
@@ -531,7 +559,7 @@ function setupReaderScraper(slug: string) {
                 const currentIdx = progress.current - 1;
                 chapters[0].index = currentIdx;
 
-                const existingChIndex = bookContent.chapters.findIndex(c => c.index === currentIdx);
+                const existingChIndex = bookContent.chapters.findIndex((c) => c.index === currentIdx);
                 if (existingChIndex > -1) {
                     bookContent.chapters[existingChIndex] = chapters[0];
                 } else {
@@ -539,7 +567,7 @@ function setupReaderScraper(slug: string) {
                 }
             } else {
                 for (const newCh of chapters) {
-                    const existingChIndex = bookContent.chapters.findIndex(c => c.index === newCh.index);
+                    const existingChIndex = bookContent.chapters.findIndex((c) => c.index === newCh.index);
                     if (existingChIndex > -1) {
                         bookContent.chapters[existingChIndex] = newCh;
                     } else {
@@ -594,7 +622,7 @@ function setupReaderScraper(slug: string) {
 
             if (isSinglePage) {
                 setStatus('Extracting continuous/single-page layout...');
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise((r) => setTimeout(r, 500));
                 await savePage();
                 setStatus('Success! Full summary stored.');
             } else {
@@ -610,7 +638,7 @@ function setupReaderScraper(slug: string) {
                     coverUrl,
                     description,
                     chapters: [],
-                    scrapedAt: Date.now()
+                    scrapedAt: Date.now(),
                 };
 
                 bookContent.title = bookContent.title || title;
@@ -630,7 +658,7 @@ function setupReaderScraper(slug: string) {
                             throw new Error('Reader content not loading. Are you logged in?');
                         }
                         setStatus(`Waiting for content... (${consecutiveErrors}/10)`);
-                        await new Promise(r => setTimeout(r, 400));
+                        await new Promise((r) => setTimeout(r, 400));
                         continue;
                     }
                     consecutiveErrors = 0;
@@ -641,7 +669,7 @@ function setupReaderScraper(slug: string) {
                     const currentChapter = chapters[0];
                     currentChapter.index = currentIdx;
 
-                    const existingChIndex = bookContent.chapters.findIndex(c => c.index === currentIdx);
+                    const existingChIndex = bookContent.chapters.findIndex((c) => c.index === currentIdx);
                     if (existingChIndex > -1) {
                         bookContent.chapters[existingChIndex] = currentChapter;
                     } else {
@@ -654,8 +682,9 @@ function setupReaderScraper(slug: string) {
                     updateProgress(bookContent.chapters.length, totalChapters);
                     setStatus(`Scraped blink ${currentProgress.current} of ${totalChapters}`);
 
-                    const isFinished = bookContent.chapters.length >= totalChapters &&
-                                       bookContent.chapters.every(c => c.paragraphs.length > 0);
+                    const isFinished =
+                        bookContent.chapters.length >= totalChapters &&
+                        bookContent.chapters.every((c) => c.paragraphs.length > 0);
 
                     if (isFinished || currentProgress.current === totalChapters) {
                         setStatus('Success! Full summary stored.');
@@ -668,12 +697,15 @@ function setupReaderScraper(slug: string) {
                     // Wait for DOM to load next chapter
                     let changed = false;
                     for (let i = 0; i < 25; i++) {
-                        await new Promise(r => setTimeout(r, 150));
+                        await new Promise((r) => setTimeout(r, 150));
                         if (!isScraping) break;
                         const newProgress = getChapterProgress();
                         const newChapters = extractChaptersFromPage();
-                        if (newProgress && (newProgress.current !== currentProgress.current || 
-                            (newChapters.length > 0 && newChapters[0].title !== currentChapter.title))) {
+                        if (
+                            newProgress &&
+                            (newProgress.current !== currentProgress.current ||
+                                (newChapters.length > 0 && newChapters[0].title !== currentChapter.title))
+                        ) {
                             changed = true;
                             break;
                         }
@@ -761,7 +793,7 @@ function setupBookPageScraper(slug: string) {
                 coverUrl,
                 description,
                 chapters: [],
-                scrapedAt: Date.now()
+                scrapedAt: Date.now(),
             };
 
             bookContent.title = bookContent.title || title;

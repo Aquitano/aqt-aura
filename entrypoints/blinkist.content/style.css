@@ -9,14 +9,14 @@
     border-radius: 16px;
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    
+
     /* Glassmorphic Dark Design */
     background: rgba(22, 22, 22, 0.88);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: #f3f4f6;
-    
+
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
@@ -172,12 +172,10 @@
     padding: 2px 0;
 }
 
-.aqt-checkbox-label input[type="checkbox"] {
+.aqt-checkbox-label input[type='checkbox'] {
     accent-color: #a855f7;
     cursor: pointer;
     width: 13px;
     height: 13px;
     margin: 0;
 }
-
-
